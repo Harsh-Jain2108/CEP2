@@ -1,0 +1,122 @@
+@import url("base.css");
+
+.profile-layout {
+  padding: 56px 0 72px;
+}
+
+.profile-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  padding: 32px;
+  display: grid;
+  gap: 28px;
+}
+
+.profile-header {
+  text-align: left;
+}
+
+.profile-header h1 {
+  font-family: "Fraunces", "Georgia", serif;
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.profile-header p {
+  color: var(--ink-soft);
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.skill-section {
+  display: grid;
+  gap: 16px;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr auto;
+  gap: 12px;
+}
+
+.input-row.learn {
+  grid-template-columns: 2fr auto;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef7f4;
+  border: 1px solid #cfe7df;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  animation: tagIn 0.3s ease;
+}
+
+.tag.learn {
+  background: #fff6e5;
+  border-color: #fde4b0;
+  color: #8a5300;
+}
+
+@keyframes tagIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tag button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: 700;
+  color: inherit;
+}
+
+.save-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.status {
+  font-size: 13px;
+  color: var(--primary);
+  display: none;
+}
+
+.status.show {
+  display: inline-flex;
+}
+
+@media (max-width: 720px) {
+  .input-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-card {
+    padding: 24px;
+  }
+}

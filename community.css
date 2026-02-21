@@ -1,0 +1,73 @@
+@import url("base.css");
+
+.community-hero {
+  padding: 56px 0 24px;
+}
+
+.community-hero h1 {
+  font-family: "Fraunces", "Georgia", serif;
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.community-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.request-card {
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+
+.request-list {
+  display: grid;
+  gap: 16px;
+}
+
+.request-item {
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.request-text {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.request-meta {
+  font-size: 13px;
+  color: var(--ink-soft);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.request-form {
+  display: grid;
+  gap: 14px;
+}
+
+.form-alert {
+  font-size: 13px;
+  color: var(--primary);
+}
+
+.form-alert.error {
+  color: #991b1b;
+}
+
+.connect-info {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .community-layout {
+    grid-template-columns: 1fr;
+  }
+}

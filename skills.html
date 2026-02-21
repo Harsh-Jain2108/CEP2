@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skills | SkillUp</title>
+    <link rel="stylesheet" href="skills.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="index.html">
+            <div class="brand-mark">SU</div>
+            <span class="brand-title">SkillUp</span>
+          </a>
+          <nav class="site-nav">
+            <a href="index.html">Home</a>
+            <a href="login.html" class="nav-auth">Login</a>
+            <a href="register.html" class="nav-auth">Register</a>
+            <a href="profile.html">Profile</a>
+            <a href="skills.html">Skills</a>
+            <a href="community.html">Community</a>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section class="skills-hero">
+          <div class="container">
+            <h1>Browse available skills</h1>
+            <p class="section-lede">
+              Filter by skill, level, or location to find the right mentor or
+              learning circle.
+            </p>
+
+            <div class="filters">
+              <input
+                class="input"
+                id="searchInput"
+                type="text"
+                placeholder="Search by skill or teacher"
+              />
+              <select class="select" id="skillFilter">
+                <option value="">All skills</option>
+              </select>
+              <select class="select" id="levelFilter">
+                <option value="">All levels</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+              <select class="select" id="locationFilter">
+                <option value="">All locations</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="skill-grid" id="skillGrid"></div>
+            <div class="empty-state" id="emptyState">
+              No matching skills found. Try adjusting your filters.
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container">
+          <p>SkillUp helps communities find teachers for free.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="skills.js"></script>
+  </body>
+</html>

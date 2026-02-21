@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Community | SkillUp</title>
+    <link rel="stylesheet" href="community.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="index.html">
+            <div class="brand-mark">SU</div>
+            <span class="brand-title">SkillUp</span>
+          </a>
+          <nav class="site-nav">
+            <a href="index.html">Home</a>
+            <a href="login.html" class="nav-auth">Login</a>
+            <a href="register.html" class="nav-auth">Register</a>
+            <a href="profile.html">Profile</a>
+            <a href="skills.html">Skills</a>
+            <a href="community.html">Community</a>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section class="community-hero">
+          <div class="container">
+            <h1>Community requests</h1>
+            <p class="section-lede">
+              Post a skill request and connect with peers who can help you
+              learn faster.
+            </p>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container community-layout">
+            <article class="card request-card">
+              <h2>Post a request</h2>
+              <p class="section-lede">
+                Example: Looking for someone to teach Python basics.
+              </p>
+              <form id="requestForm" class="request-form">
+                <div class="field">
+                  <label for="requestName">Your name</label>
+                  <input
+                    class="input"
+                    id="requestName"
+                    type="text"
+                    placeholder="e.g. Riya Kulkarni"
+                    required
+                  />
+                </div>
+                <div class="field">
+                  <label for="requestText">Skill request</label>
+                  <textarea
+                    class="textarea"
+                    id="requestText"
+                    rows="4"
+                    placeholder="Describe what you want to learn"
+                    required
+                  ></textarea>
+                </div>
+                <button class="btn btn-primary" type="submit">
+                  Post request
+                </button>
+                <div class="form-alert" id="requestAlert" role="status"></div>
+              </form>
+            </article>
+
+            <section class="request-list" id="requestList"></section>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container">
+          <p>SkillUp encourages friendly, offline-first collaboration.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="community.js"></script>
+  </body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | SkillUp</title>
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body data-form="login">
+    <div class="page">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="index.html">
+            <div class="brand-mark">SU</div>
+            <span class="brand-title">SkillUp</span>
+          </a>
+          <nav class="site-nav">
+            <a href="index.html">Home</a>
+            <a href="login.html" class="nav-auth">Login</a>
+            <a href="register.html" class="nav-auth">Register</a>
+            <a href="profile.html">Profile</a>
+            <a href="skills.html">Skills</a>
+            <a href="community.html">Community</a>
+          </nav>
+        </div>
+      </header>
+
+      <main class="auth-wrapper">
+        <section class="auth-card">
+          <h1 class="auth-title">Welcome back</h1>
+          <p class="auth-subtitle">Sign in to continue learning and sharing.</p>
+
+          <form>
+            <div class="form-grid">
+              <div class="field">
+                <label for="loginEmail">Email</label>
+                <input
+                  class="input"
+                  type="email"
+                  id="loginEmail"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="loginPassword">Password</label>
+                <div class="password-field">
+                  <input
+                    class="input"
+                    type="password"
+                    id="loginPassword"
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    class="password-toggle"
+                    type="button"
+                    data-target="loginPassword"
+                    aria-label="Toggle password visibility"
+                  ></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="auth-actions">
+              <button class="btn btn-primary" type="submit">Login</button>
+              <div class="alert" role="status" aria-live="polite"></div>
+            </div>
+          </form>
+
+          <div class="divider">or continue with</div>
+          <button class="google-btn" type="button">Sign in with Google</button>
+
+          <p class="switch-text">
+            New to SkillUp? <a href="register.html">Create an account</a>
+          </p>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container">
+          <p>SkillUp is community-driven and always free.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="auth.js"></script>
+  </body>
+</html>

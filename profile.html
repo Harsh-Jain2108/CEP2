@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile | SkillUp</title>
+    <link rel="stylesheet" href="profile.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="index.html">
+            <div class="brand-mark">SU</div>
+            <span class="brand-title">SkillUp</span>
+          </a>
+          <nav class="site-nav">
+            <a href="index.html">Home</a>
+            <a href="login.html" class="nav-auth">Login</a>
+            <a href="register.html" class="nav-auth">Register</a>
+            <a href="profile.html">Profile</a>
+            <a href="skills.html">Skills</a>
+            <a href="community.html">Community</a>
+          </nav>
+        </div>
+      </header>
+
+      <main class="profile-layout">
+        <div class="container">
+          <section class="profile-card">
+            <div class="profile-header">
+              <h1>My Profile</h1>
+              <p>Keep your details up to date and list your skills.</p>
+            </div>
+
+            <div class="profile-grid">
+              <div class="field">
+                <label for="fullName">Full name</label>
+                <input
+                  class="input"
+                  id="fullName"
+                  type="text"
+                  placeholder="e.g. Aditi Sharma"
+                />
+              </div>
+              <div class="field">
+                <label for="location">Location or college</label>
+                <input
+                  class="input"
+                  id="location"
+                  type="text"
+                  placeholder="e.g. PCCOE, Pune"
+                />
+              </div>
+            </div>
+
+            <div class="skill-section">
+              <h2>Skills I can teach</h2>
+              <div class="input-row">
+                <input
+                  class="input"
+                  id="teachSkillInput"
+                  type="text"
+                  placeholder="Skill name"
+                />
+                <select class="select" id="teachSkillLevel">
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+                <button class="btn btn-primary" type="button" id="addTeach">
+                  Add
+                </button>
+              </div>
+              <div class="tag-list" id="teachTags"></div>
+            </div>
+
+            <div class="skill-section">
+              <h2>Skills I want to learn</h2>
+              <div class="input-row learn">
+                <input
+                  class="input"
+                  id="learnSkillInput"
+                  type="text"
+                  placeholder="Skill name"
+                />
+                <button class="btn btn-outline" type="button" id="addLearn">
+                  Add
+                </button>
+              </div>
+              <div class="tag-list" id="learnTags"></div>
+            </div>
+
+            <div class="save-row">
+              <button class="btn btn-primary" type="button" id="saveProfile">
+                Save profile
+              </button>
+              <span class="status" id="saveStatus">Profile saved.</span>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container">
+          <p>SkillUp keeps your profile data on this device only.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="profile.js"></script>
+  </body>
+</html>
