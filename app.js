@@ -8,8 +8,42 @@ navLinks.forEach((link) => {
 });
 
 function safeRedirect(url) {
-  if (window.location.href !== url) {
-    window.location.replace(url);
+  try {
+    const current = new URL(window.location.href);
+    const target = new URL(url, window.location.origin);
+
+    if (target.origin !== window.location.origin) {
+      console.warn("[auth] Blocked cross-origin redirect from app route guard.", {
+        currentOrigin: current.origin,
+        targetOrigin: target.origin
+      });
+      return false;
+    }
+
+    if (current.href === target.href) {
+      return false;
+    }
+
+    const key = `route-auth:redirect:${target.pathname}`;
+    const now = Date.now();
+    const payload = JSON.parse(window.sessionStorage.getItem(key) || "{}");
+    const count = now - Number(payload.ts || 0) < 10000 ? Number(payload.count || 0) + 1 : 1;
+
+    window.sessionStorage.setItem(key, JSON.stringify({ ts: now, count }));
+
+    if (count > 3) {
+      console.warn("[auth] Route redirect loop guard triggered.", {
+        targetPath: target.pathname,
+        count
+      });
+      return false;
+    }
+
+    window.location.replace(target.href);
+    return true;
+  } catch (error) {
+    console.error("[auth] Failed route redirect:", error);
+    return false;
   }
 }
 
@@ -43,7 +77,8 @@ async function bootstrapRouteAuth() {
     isAuthPage,
     isProtectedPage,
     waitForSessionRestore,
-    upsertOwnProfile
+    upsertOwnProfile,
+    authLog
   } = await import("./supabase.js");
 
   const supabase = await getSupabaseClient();
@@ -53,6 +88,10 @@ async function bootstrapRouteAuth() {
 
   const session = await waitForSessionRestore(supabase);
   const user = session?.user || null;
+  authLog("Route auth bootstrap", {
+    page: currentPage,
+    hasUser: Boolean(user)
+  });
 
   updateAuthNavVisibility(Boolean(user));
 
@@ -91,17 +130,31 @@ async function bootstrapRouteAuth() {
     });
   }
 
+  let redirecting = false;
   supabase.auth.onAuthStateChange((event, nextSession) => {
+    if (event !== "SIGNED_IN" && event !== "SIGNED_OUT") {
+      return;
+    }
+
     const nextUser = nextSession?.user || null;
     updateAuthNavVisibility(Boolean(nextUser));
+    authLog("Route auth state change", {
+      event,
+      page: currentPage,
+      hasUser: Boolean(nextUser)
+    });
+
+    if (redirecting) {
+      return;
+    }
 
     if (event === "SIGNED_OUT" && isProtectedPage(currentPage)) {
-      safeRedirect(loginUrl);
+      redirecting = safeRedirect(loginUrl);
       return;
     }
 
     if (event === "SIGNED_IN" && isAuthPage(currentPage) && nextUser) {
-      safeRedirect(profileUrl);
+      redirecting = safeRedirect(profileUrl);
     }
   });
 }

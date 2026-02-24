@@ -86,8 +86,42 @@ function initPasswordToggles() {
 }
 
 function safeRedirect(url) {
-  if (window.location.href !== url) {
-    window.location.replace(url);
+  try {
+    const current = new URL(window.location.href);
+    const target = new URL(url, window.location.origin);
+
+    if (target.origin !== window.location.origin) {
+      console.warn("[auth] Blocked cross-origin redirect.", {
+        currentOrigin: current.origin,
+        targetOrigin: target.origin
+      });
+      return false;
+    }
+
+    if (current.href === target.href) {
+      return false;
+    }
+
+    const key = `auth:redirect:${target.pathname}`;
+    const now = Date.now();
+    const payload = JSON.parse(window.sessionStorage.getItem(key) || "{}");
+    const count = now - Number(payload.ts || 0) < 10000 ? Number(payload.count || 0) + 1 : 1;
+
+    window.sessionStorage.setItem(key, JSON.stringify({ ts: now, count }));
+
+    if (count > 3) {
+      console.warn("[auth] Redirect loop guard triggered.", {
+        targetPath: target.pathname,
+        count
+      });
+      return false;
+    }
+
+    window.location.replace(target.href);
+    return true;
+  } catch (error) {
+    console.error("[auth] Failed to redirect safely:", error);
+    return false;
   }
 }
 
@@ -102,11 +136,14 @@ async function bootstrapAuth() {
     getSupabaseClient,
     buildRedirectUrl,
     waitForSessionRestore,
-    upsertOwnProfile
+    upsertOwnProfile,
+    authLog,
+    authWarn
   } = await import("./supabase.js");
 
   const supabase = await getSupabaseClient();
   const profileUrl = buildRedirectUrl("profile.html");
+  const loginUrl = buildRedirectUrl("login.html");
 
   let redirecting = false;
   const redirectToProfile = () => {
@@ -115,7 +152,10 @@ async function bootstrapAuth() {
     }
 
     redirecting = true;
-    safeRedirect(profileUrl);
+    const redirected = safeRedirect(profileUrl);
+    if (!redirected) {
+      redirecting = false;
+    }
   };
 
   const params = new URLSearchParams(window.location.search);
@@ -125,6 +165,11 @@ async function bootstrapAuth() {
   }
 
   const restoredSession = await waitForSessionRestore(supabase);
+  authLog("Auth page session restore complete", {
+    page: window.location.pathname,
+    hasSession: Boolean(restoredSession?.user)
+  });
+
   if (restoredSession?.user) {
     redirectToProfile();
     return;
@@ -134,6 +179,7 @@ async function bootstrapAuth() {
     data: { subscription }
   } = supabase.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_IN" && session?.user) {
+      authLog("SIGNED_IN event on auth page; redirecting to profile.");
       redirectToProfile();
     }
   });
@@ -175,6 +221,17 @@ async function bootstrapAuth() {
           }
         }
 
+        const restored = await waitForSessionRestore(supabase, 3000);
+        authLog("Post-password login session check", {
+          hasSession: Boolean(restored?.user)
+        });
+
+        if (!restored?.user) {
+          authWarn("No session after password login on auth page.");
+          showAlert("error", "Login is taking longer than expected. Please retry.");
+          return;
+        }
+
         redirectToProfile();
         return;
       }
@@ -198,7 +255,7 @@ async function bootstrapAuth() {
         password,
         options: {
           data: { full_name: fullName },
-          emailRedirectTo: profileUrl
+          emailRedirectTo: loginUrl
         }
       });
 
@@ -234,10 +291,11 @@ async function bootstrapAuth() {
       googleButton.disabled = true;
 
       try {
-        const { error } = await supabase.auth.signInWithOAuth({
+        const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "google",
           options: {
-            redirectTo: profileUrl,
+            redirectTo: loginUrl,
+            skipBrowserRedirect: true,
             queryParams: {
               access_type: "offline",
               prompt: "consent"
@@ -248,7 +306,16 @@ async function bootstrapAuth() {
         if (error) {
           showAlert("error", mapAuthError(error.message));
           googleButton.disabled = false;
+          return;
         }
+
+        if (!data?.url) {
+          showAlert("error", "Unable to start Google sign-in. Please try again.");
+          googleButton.disabled = false;
+          return;
+        }
+
+        window.location.assign(data.url);
       } catch (error) {
         console.error("Google OAuth error:", error);
         showAlert("error", "Google sign-in failed. Please try again.");
