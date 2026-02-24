@@ -193,6 +193,10 @@ export function buildRedirectUrl(targetPage) {
   return new URL(targetPage, window.location.href).toString();
 }
 
+export function getSupabaseOrigin() {
+  return new URL(SUPABASE_URL).origin;
+}
+
 export function getCurrentPage() {
   const path = window.location.pathname;
   return path.split("/").pop() || "index.html";

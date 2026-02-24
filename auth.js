@@ -135,6 +135,7 @@ async function bootstrapAuth() {
   const {
     getSupabaseClient,
     buildRedirectUrl,
+    getSupabaseOrigin,
     waitForSessionRestore,
     upsertOwnProfile,
     authLog,
@@ -142,6 +143,7 @@ async function bootstrapAuth() {
   } = await import("./supabase.js");
 
   const supabase = await getSupabaseClient();
+  const supabaseOrigin = getSupabaseOrigin();
   const profileUrl = buildRedirectUrl("profile.html");
   const loginUrl = buildRedirectUrl("login.html");
 
@@ -291,6 +293,26 @@ async function bootstrapAuth() {
       googleButton.disabled = true;
 
       try {
+        let canReachAuthHost = true;
+        try {
+          await fetch(`${supabaseOrigin}/auth/v1/health`, {
+            method: "GET",
+            mode: "no-cors",
+            cache: "no-store"
+          });
+        } catch (_error) {
+          canReachAuthHost = false;
+        }
+
+        if (!canReachAuthHost) {
+          showAlert(
+            "error",
+            "Your phone cannot reach Supabase auth server. Disable Brave Shields/Private DNS or try another network/browser."
+          );
+          googleButton.disabled = false;
+          return;
+        }
+
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "google",
           options: {
@@ -315,6 +337,10 @@ async function bootstrapAuth() {
           return;
         }
 
+        authLog("Redirecting to OAuth authorize URL", {
+          provider: "google",
+          redirectOrigin: new URL(loginUrl).origin
+        });
         window.location.assign(data.url);
       } catch (error) {
         console.error("Google OAuth error:", error);
