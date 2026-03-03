@@ -1,4 +1,8 @@
+const nav = document.querySelector(".site-nav");
 const navLinks = document.querySelectorAll(".site-nav a");
+const MEMBER_ROUTE_HREFS = new Set(["profile.html", "skills.html"]);
+const PUBLIC_ROUTE_HREFS = new Set(["index.html"]);
+const AUTH_ROUTE_HREFS = new Set(["login.html", "register.html"]);
 
 navLinks.forEach((link) => {
   const href = link.getAttribute("href");
@@ -47,27 +51,75 @@ function safeRedirect(url) {
   }
 }
 
-function updateAuthNavVisibility(isLoggedIn) {
-  const authLinks = document.querySelectorAll("a.nav-auth");
-  authLinks.forEach((link) => {
-    link.style.display = isLoggedIn ? "none" : "";
+function setNavigationPending(isPending) {
+  if (!nav) {
+    return;
+  }
+  nav.style.visibility = isPending ? "hidden" : "visible";
+  nav.setAttribute("aria-busy", isPending ? "true" : "false");
+}
+
+function ensureNavbarLogoutControl() {
+  if (!nav) {
+    return null;
+  }
+
+  const existing = nav.querySelector("#navLogoutBtn");
+  if (existing) {
+    return existing;
+  }
+
+  const logoutLink = document.createElement("a");
+  logoutLink.id = "navLogoutBtn";
+  logoutLink.href = "#";
+  logoutLink.textContent = "Logout";
+  logoutLink.className = "nav-logout";
+  logoutLink.style.display = "none";
+  nav.appendChild(logoutLink);
+  return logoutLink;
+}
+
+function updateNavbar(user) {
+  const isLoggedIn = Boolean(user);
+  const allNavLinks = Array.from(document.querySelectorAll(".site-nav a"));
+
+  allNavLinks.forEach((link) => {
+    const href = (link.getAttribute("href") || "").trim().toLowerCase();
+    const isLogout = link.id === "navLogoutBtn";
+
+    if (isLogout) {
+      link.style.display = isLoggedIn ? "" : "none";
+      return;
+    }
+
+    if (PUBLIC_ROUTE_HREFS.has(href)) {
+      link.style.display = "";
+      return;
+    }
+
+    if (AUTH_ROUTE_HREFS.has(href)) {
+      link.style.display = isLoggedIn ? "none" : "";
+      return;
+    }
+
+    if (MEMBER_ROUTE_HREFS.has(href)) {
+      link.style.display = isLoggedIn ? "" : "none";
+      return;
+    }
+
+    // Hide extra nav entries that are not part of the required states.
+    link.style.display = "none";
   });
 }
 
-function ensureLogoutButton(profileHeader, onLogout) {
-  if (!profileHeader || document.getElementById("logoutBtn")) {
-    return;
+function requireAuth({ user, loginUrl }) {
+  if (Boolean(user)) {
+    return false;
   }
-
-  const logoutButton = document.createElement("button");
-  logoutButton.id = "logoutBtn";
-  logoutButton.type = "button";
-  logoutButton.className = "btn btn-outline";
-  logoutButton.textContent = "Logout";
-
-  logoutButton.addEventListener("click", onLogout);
-  profileHeader.appendChild(logoutButton);
+  return safeRedirect(loginUrl);
 }
+
+setNavigationPending(true);
 
 async function bootstrapRouteAuth() {
   const {
@@ -84,7 +136,26 @@ async function bootstrapRouteAuth() {
   const supabase = await getSupabaseClient();
   const currentPage = getCurrentPage();
   const loginUrl = buildRedirectUrl("login.html");
-  const profileUrl = buildRedirectUrl("profile.html");
+  const homeUrl = buildRedirectUrl("index.html");
+  const logoutLink = ensureNavbarLogoutControl();
+
+  if (logoutLink) {
+    logoutLink.addEventListener("click", async (event) => {
+      event.preventDefault();
+      logoutLink.setAttribute("aria-disabled", "true");
+      logoutLink.style.pointerEvents = "none";
+
+      try {
+        await supabase.auth.signOut();
+        safeRedirect(homeUrl);
+      } catch (error) {
+        console.error("Logout failed:", error);
+        logoutLink.removeAttribute("aria-disabled");
+        logoutLink.style.pointerEvents = "";
+        alert("Logout failed. Please try again.");
+      }
+    });
+  }
 
   const session = await waitForSessionRestore(supabase);
   const user = session?.user || null;
@@ -93,7 +164,8 @@ async function bootstrapRouteAuth() {
     hasUser: Boolean(user)
   });
 
-  updateAuthNavVisibility(Boolean(user));
+  updateNavbar(user);
+  setNavigationPending(false);
 
   if (user) {
     const profileResult = await upsertOwnProfile(supabase, user);
@@ -103,31 +175,12 @@ async function bootstrapRouteAuth() {
   }
 
   if (isAuthPage(currentPage) && user) {
-    safeRedirect(profileUrl);
+    safeRedirect(homeUrl);
     return;
   }
 
-  if (isProtectedPage(currentPage) && !user) {
-    safeRedirect(loginUrl);
+  if (isProtectedPage(currentPage) && requireAuth({ user, loginUrl })) {
     return;
-  }
-
-  if (isProtectedPage(currentPage) && user) {
-    const profileHeader = document.querySelector(".profile-header");
-
-    ensureLogoutButton(profileHeader, async (event) => {
-      const button = event.currentTarget;
-      button.disabled = true;
-
-      try {
-        await supabase.auth.signOut();
-        safeRedirect(loginUrl);
-      } catch (error) {
-        console.error("Logout failed:", error);
-        button.disabled = false;
-        alert("Logout failed. Please try again.");
-      }
-    });
   }
 
   let redirecting = false;
@@ -137,7 +190,8 @@ async function bootstrapRouteAuth() {
     }
 
     const nextUser = nextSession?.user || null;
-    updateAuthNavVisibility(Boolean(nextUser));
+    updateNavbar(nextUser);
+    setNavigationPending(false);
     authLog("Route auth state change", {
       event,
       page: currentPage,
@@ -149,16 +203,17 @@ async function bootstrapRouteAuth() {
     }
 
     if (event === "SIGNED_OUT" && isProtectedPage(currentPage)) {
-      redirecting = safeRedirect(loginUrl);
+      redirecting = requireAuth({ user: nextUser, loginUrl });
       return;
     }
 
     if (event === "SIGNED_IN" && isAuthPage(currentPage) && nextUser) {
-      redirecting = safeRedirect(profileUrl);
+      redirecting = safeRedirect(homeUrl);
     }
   });
 }
 
 bootstrapRouteAuth().catch((error) => {
   console.error("Route auth bootstrap failed:", error);
+  setNavigationPending(false);
 });

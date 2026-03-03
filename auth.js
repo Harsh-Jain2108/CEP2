@@ -144,17 +144,17 @@ async function bootstrapAuth() {
 
   const supabase = await getSupabaseClient();
   const supabaseOrigin = getSupabaseOrigin();
-  const profileUrl = buildRedirectUrl("profile.html");
+  const homeUrl = buildRedirectUrl("index.html");
   const loginUrl = buildRedirectUrl("login.html");
 
   let redirecting = false;
-  const redirectToProfile = () => {
+  const redirectToHome = () => {
     if (redirecting) {
       return;
     }
 
     redirecting = true;
-    const redirected = safeRedirect(profileUrl);
+    const redirected = safeRedirect(homeUrl);
     if (!redirected) {
       redirecting = false;
     }
@@ -173,7 +173,7 @@ async function bootstrapAuth() {
   });
 
   if (restoredSession?.user) {
-    redirectToProfile();
+    redirectToHome();
     return;
   }
 
@@ -181,8 +181,8 @@ async function bootstrapAuth() {
     data: { subscription }
   } = supabase.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_IN" && session?.user) {
-      authLog("SIGNED_IN event on auth page; redirecting to profile.");
-      redirectToProfile();
+      authLog("SIGNED_IN event on auth page; redirecting to home.");
+      redirectToHome();
     }
   });
 
@@ -234,7 +234,7 @@ async function bootstrapAuth() {
           return;
         }
 
-        redirectToProfile();
+        redirectToHome();
         return;
       }
 
@@ -272,7 +272,7 @@ async function bootstrapAuth() {
           console.error("Profile upsert failed after register:", profileResult.error.message);
         }
 
-        redirectToProfile();
+        redirectToHome();
         return;
       }
 
@@ -316,7 +316,7 @@ async function bootstrapAuth() {
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "google",
           options: {
-            redirectTo: loginUrl,
+            redirectTo: homeUrl,
             skipBrowserRedirect: true,
             queryParams: {
               access_type: "offline",

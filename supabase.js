@@ -1,5 +1,7 @@
 const SUPABASE_URL = "https://ivomdzongrguaaliljqh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_trINiPqOuXDGnjsbvO1JzA_m9YDL4Ry";
+const AUTH_PAGES = new Set(["login.html", "register.html"]);
+const PROTECTED_PAGES = new Set(["profile.html", "skills.html", "community.html"]);
 
 let supabaseClient;
 let sessionRestorePromise = null;
@@ -177,7 +179,7 @@ export async function getSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      flowType: "implicit"
+      flowType: "pkce"
     }
   });
 
@@ -203,11 +205,11 @@ export function getCurrentPage() {
 }
 
 export function isAuthPage(pageName = getCurrentPage()) {
-  return pageName === "login.html" || pageName === "register.html";
+  return AUTH_PAGES.has(pageName);
 }
 
 export function isProtectedPage(pageName = getCurrentPage()) {
-  return pageName === "profile.html";
+  return PROTECTED_PAGES.has(pageName);
 }
 
 export async function waitForSessionRestore(supabase, timeoutMs = 5000) {
