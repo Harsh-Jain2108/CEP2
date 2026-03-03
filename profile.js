@@ -1,19 +1,22 @@
 const fullNameInput = document.getElementById("fullName");
-const bioInput = document.getElementById("location");
+const locationInput = document.getElementById("location");
 const saveButton = document.getElementById("saveProfile");
 const saveStatus = document.getElementById("saveStatus");
 const profileForm = saveButton?.closest("form") || null;
+const teachSkillInput = document.getElementById("teachSkillInput");
+const learnSkillInput = document.getElementById("learnSkillInput");
+const addTeachButton = document.getElementById("addTeach");
+const addLearnButton = document.getElementById("addLearn");
+const teachTags = document.getElementById("teachTags");
+const learnTags = document.getElementById("learnTags");
 
-function setFormLoadingState(isLoading) {
-  if (fullNameInput) {
-    fullNameInput.disabled = isLoading;
-  }
-  if (bioInput) {
-    bioInput.disabled = isLoading;
-  }
-  if (saveButton) {
-    saveButton.disabled = isLoading;
-  }
+function extractErrorDetails(error) {
+  return {
+    message: error?.message || "Unknown error",
+    code: error?.code || null,
+    details: error?.details || null,
+    hint: error?.hint || null
+  };
 }
 
 function setStatus(message, isError = false) {
@@ -21,7 +24,7 @@ function setStatus(message, isError = false) {
     return;
   }
   saveStatus.textContent = message;
-  saveStatus.classList.toggle("show", true);
+  saveStatus.classList.add("show");
   saveStatus.style.color = isError ? "#b42318" : "";
 }
 
@@ -33,20 +36,19 @@ function clearStatus() {
   saveStatus.style.color = "";
 }
 
-function extractErrorDetails(error) {
-  return {
-    message: error?.message || "Unknown error",
-    code: error?.code || null,
-    details: error?.details || null,
-    hint: error?.hint || null
-  };
+function setLoadingState(isLoading) {
+  if (fullNameInput) {
+    fullNameInput.disabled = isLoading;
+  }
+  if (locationInput) {
+    locationInput.disabled = isLoading;
+  }
+  if (saveButton) {
+    saveButton.disabled = isLoading;
+  }
 }
 
-function normalizeBio(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
-}
-
-function normalizeFullName(value) {
+function normalizeText(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
 
@@ -54,14 +56,9 @@ function safeRedirect(url) {
   try {
     const current = new URL(window.location.href);
     const target = new URL(url, window.location.origin);
-
-    if (target.origin !== window.location.origin) {
+    if (target.origin !== window.location.origin || current.href === target.href) {
       return false;
     }
-    if (current.href === target.href) {
-      return false;
-    }
-
     window.location.replace(target.href);
     return true;
   } catch (_error) {
@@ -79,7 +76,7 @@ function getFallbackFullName(user) {
 }
 
 async function bootstrapProfile() {
-  if (!fullNameInput || !bioInput || !saveButton) {
+  if (!fullNameInput || !locationInput || !saveButton) {
     return;
   }
 
@@ -87,7 +84,7 @@ async function bootstrapProfile() {
   const supabase = await getSupabaseClient();
   const loginUrl = buildRedirectUrl("login.html");
 
-  setFormLoadingState(true);
+  setLoadingState(true);
   setStatus("Loading profile...");
 
   const session = await waitForSessionRestore(supabase);
@@ -99,57 +96,199 @@ async function bootstrapProfile() {
 
   let activeUserId = user.id;
 
-  const loadProfile = async () => {
-    setFormLoadingState(true);
+  const getUserAfterSessionRestore = async () => {
+    const nextSession = await waitForSessionRestore(supabase);
+    return nextSession?.user || null;
+  };
 
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, bio")
-        .eq("id", activeUserId)
-        .maybeSingle();
+  const renderSkillTags = (container, skills, type) => {
+    if (!container) {
+      return;
+    }
+    container.textContent = "";
 
-      if (error) {
-        throw error;
-      }
-
-      const profile = data || {};
-      fullNameInput.value = profile.full_name || getFallbackFullName(user);
-      bioInput.value = profile.bio || "";
-
-      if (!data) {
-        setStatus("No profile data yet. Add your bio and click Save profile.");
-      } else {
-        clearStatus();
-      }
-    } catch (error) {
-      console.error("Failed to load profile:", error);
-      setStatus("Unable to load profile. Please refresh and try again.", true);
-    } finally {
-      setFormLoadingState(false);
+    for (const skill of skills) {
+      const tag = document.createElement("span");
+      tag.className = type === "learn" ? "tag learn" : "tag";
+      tag.textContent = skill?.name || "";
+      container.appendChild(tag);
     }
   };
 
-  await loadProfile();
+  const fetchAndRenderSkills = async () => {
+    const restoredUser = await getUserAfterSessionRestore();
+    if (!restoredUser) {
+      safeRedirect(loginUrl);
+      return;
+    }
+    activeUserId = restoredUser.id;
+
+    const { data, error } = await supabase
+      .from("user_skills")
+      .select("type, skills(name)")
+      .eq("user_id", activeUserId);
+
+    if (error) {
+      throw error;
+    }
+
+    const teachSkillRows = [];
+    const learnSkillRows = [];
+
+    for (const row of data || []) {
+      const name = row?.skills?.name;
+      if (!name) {
+        continue;
+      }
+      if (row.type === "teach") {
+        teachSkillRows.push({ name });
+      } else if (row.type === "learn") {
+        learnSkillRows.push({ name });
+      }
+    }
+
+    renderSkillTags(teachTags, teachSkillRows, "teach");
+    renderSkillTags(learnTags, learnSkillRows, "learn");
+  };
+
+  const handleSkillAdd = async (type) => {
+    const input = type === "teach" ? teachSkillInput : learnSkillInput;
+    const rawValue = normalizeText(input?.value || "");
+
+    if (!rawValue) {
+      return;
+    }
+
+    const restoredUser = await getUserAfterSessionRestore();
+    if (!restoredUser) {
+      safeRedirect(loginUrl);
+      return;
+    }
+    activeUserId = restoredUser.id;
+    const userId = restoredUser.id;
+    console.log("userId", userId);
+
+    const { data: existingSkillRows, error: existingSkillError } = await supabase
+      .from("skills")
+      .select("id, name")
+      .ilike("name", rawValue)
+      .limit(1);
+
+    if (existingSkillError) {
+      throw existingSkillError;
+    }
+
+    let skillId = existingSkillRows?.[0]?.id || null;
+    if (!skillId) {
+      const { data: insertedSkillRows, error: insertSkillError } = await supabase
+        .from("skills")
+        .insert({ name: rawValue })
+        .select("id")
+        .limit(1);
+      if (insertSkillError) {
+        throw insertSkillError;
+      }
+      skillId = insertedSkillRows?.[0]?.id || null;
+    }
+
+    if (!skillId) {
+      throw new Error("Skill ID not found after lookup/insert.");
+    }
+    console.log("skillId", skillId);
+
+    const { data: insertResult, error: userSkillError } = await supabase
+      .from("user_skills")
+      .upsert(
+        {
+          user_id: userId,
+          skill_id: skillId,
+          type
+        },
+        { onConflict: "user_id,skill_id,type" }
+      )
+      .select("*");
+
+    console.log("insert result", insertResult);
+    if (userSkillError) {
+      console.error("error", extractErrorDetails(userSkillError));
+      throw userSkillError;
+    }
+
+    if (input) {
+      input.value = "";
+    }
+    await fetchAndRenderSkills();
+  };
+
+  const ensureProfileRow = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", activeUserId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+    if (data) {
+      return data;
+    }
+
+    const bootstrapRow = {
+      id: activeUserId,
+      full_name: getFallbackFullName(user),
+      bio: "",
+      location: ""
+    };
+
+    const { data: upserted, error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(bootstrapRow, { onConflict: "id" })
+      .select("*")
+      .maybeSingle();
+
+    if (upsertError) {
+      throw upsertError;
+    }
+    return upserted || bootstrapRow;
+  };
+
+  const loadProfile = async () => {
+    setLoadingState(true);
+    try {
+      const profile = await ensureProfileRow();
+      fullNameInput.value = profile.full_name || getFallbackFullName(user);
+      locationInput.value = profile.location || profile.bio || "";
+      await fetchAndRenderSkills();
+      clearStatus();
+    } catch (error) {
+      console.error("Failed to load profile:", extractErrorDetails(error));
+      setStatus("Unable to load profile. Please refresh and try again.", true);
+    } finally {
+      setLoadingState(false);
+    }
+  };
 
   const saveProfile = async () => {
-    const fullName = normalizeFullName(fullNameInput.value);
-    const bio = normalizeBio(bioInput.value);
+    const fullName = normalizeText(fullNameInput.value);
+    const location = normalizeText(locationInput.value);
+    const bio = location; // existing UI has one field; keep bio/location synchronized
 
     if (!fullName) {
       setStatus("Full name is required.", true);
       return;
     }
 
-    setFormLoadingState(true);
+    setLoadingState(true);
     setStatus("Saving profile...");
 
     try {
+      const payload = { full_name: fullName, bio, location };
       const { data, error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName, bio })
+        .update(payload)
         .eq("id", activeUserId)
-        .select("id, full_name, bio")
+        .select("*")
         .maybeSingle();
 
       if (error) {
@@ -157,15 +296,9 @@ async function bootstrapProfile() {
       }
 
       if (!data) {
-        const { error: upsertError } = await supabase.from("profiles").upsert(
-          {
-            id: activeUserId,
-            full_name: fullName,
-            bio
-          },
-          { onConflict: "id" }
-        );
-
+        const { error: upsertError } = await supabase
+          .from("profiles")
+          .upsert({ id: activeUserId, ...payload }, { onConflict: "id" });
         if (upsertError) {
           throw upsertError;
         }
@@ -174,23 +307,55 @@ async function bootstrapProfile() {
       setStatus("Profile saved.");
     } catch (error) {
       console.error("Failed to save profile:", extractErrorDetails(error));
-      setStatus("Could not save profile. Please try again.", true);
+      setStatus("Could not save profile. Check RLS and try again.", true);
     } finally {
-      setFormLoadingState(false);
+      setLoadingState(false);
     }
   };
 
-  saveButton.addEventListener("click", async (event) => {
+  saveButton.addEventListener("click", (event) => {
     event.preventDefault();
-    await saveProfile();
+    saveProfile().catch((error) => {
+      console.error("Save profile action failed:", extractErrorDetails(error));
+      setStatus("Could not save profile.", true);
+      setLoadingState(false);
+    });
   });
 
   if (profileForm) {
-    profileForm.addEventListener("submit", async (event) => {
+    profileForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      await saveProfile();
+      saveProfile().catch((error) => {
+        console.error("Profile form submit failed:", extractErrorDetails(error));
+        setStatus("Could not save profile.", true);
+        setLoadingState(false);
+      });
     });
   }
+
+  if (addTeachButton) {
+    addTeachButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      console.log("Teach add clicked");
+      handleSkillAdd("teach").catch((error) => {
+        console.error("error", extractErrorDetails(error));
+        setStatus("Could not add teach skill. Check RLS and try again.", true);
+      });
+    });
+  }
+
+  if (addLearnButton) {
+    addLearnButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      console.log("Learn add clicked");
+      handleSkillAdd("learn").catch((error) => {
+        console.error("error", extractErrorDetails(error));
+        setStatus("Could not add learn skill. Check RLS and try again.", true);
+      });
+    });
+  }
+
+  await loadProfile();
 
   supabase.auth.onAuthStateChange((_event, nextSession) => {
     const nextUser = nextSession?.user || null;
@@ -198,11 +363,10 @@ async function bootstrapProfile() {
       safeRedirect(loginUrl);
       return;
     }
-
     if (nextUser.id !== activeUserId) {
       activeUserId = nextUser.id;
       loadProfile().catch((error) => {
-        console.error("Failed to reload profile after auth change:", error);
+        console.error("Failed to reload profile after auth change:", extractErrorDetails(error));
       });
     }
   });
@@ -210,6 +374,6 @@ async function bootstrapProfile() {
 
 bootstrapProfile().catch((error) => {
   console.error("Profile bootstrap failed:", extractErrorDetails(error));
-  setStatus("Profile could not initialize. Please reload.", true);
-  setFormLoadingState(false);
+  setStatus("Profile initialization failed.", true);
+  setLoadingState(false);
 });

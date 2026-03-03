@@ -1,174 +1,137 @@
-const skillGrid = document.getElementById("skillGrid");
-const emptyState = document.getElementById("emptyState");
-const searchInput = document.getElementById("searchInput");
-const typeSelect = document.getElementById("skillFilter");
-const levelFilter = document.getElementById("levelFilter");
-const locationFilter = document.getElementById("locationFilter");
-const skillsForm = searchInput?.closest("form") || null;
-const addSkillButton =
-  document.getElementById("addSkill") ||
-  document.getElementById("addSkillBtn") ||
-  document.querySelector("[data-action='add-skill']");
+console.log("skills.js loaded");
 
-function normalizeSkillName(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
-}
+document.addEventListener("DOMContentLoaded", () => {
+  const skillGrid = document.getElementById("skillGrid");
+  const emptyState = document.getElementById("emptyState");
+  const searchInput = document.getElementById("searchInput");
+  const typeSelect = document.getElementById("skillFilter");
+  const addSkillButton =
+    document.getElementById("addSkill") ||
+    document.getElementById("addSkillBtn") ||
+    document.querySelector("[data-action='add-skill']");
 
-function safeRedirect(url) {
-  try {
-    const current = new URL(window.location.href);
-    const target = new URL(url, window.location.origin);
-
-    if (target.origin !== window.location.origin) {
-      return false;
-    }
-    if (current.href === target.href) {
-      return false;
-    }
-
-    window.location.replace(target.href);
-    return true;
-  } catch (_error) {
-    return false;
-  }
-}
-
-function setStatus(message, isError = false) {
-  if (!emptyState) {
+  if (!searchInput) {
+    console.error("searchInput not found");
     return;
   }
-  emptyState.textContent = message;
-  emptyState.style.color = isError ? "#b42318" : "";
-  emptyState.style.display = "block";
-}
-
-function clearStatus() {
-  if (!emptyState) {
+  if (!typeSelect) {
+    console.error("skillFilter not found");
     return;
   }
-  emptyState.textContent = "";
-  emptyState.style.color = "";
-}
-
-function setControlsDisabled(isDisabled) {
-  if (searchInput) {
-    searchInput.disabled = isDisabled;
-  }
-  if (typeSelect) {
-    typeSelect.disabled = isDisabled;
-  }
-  if (levelFilter) {
-    levelFilter.disabled = isDisabled;
-  }
-  if (locationFilter) {
-    locationFilter.disabled = isDisabled;
-  }
-  if (addSkillButton) {
-    addSkillButton.disabled = isDisabled;
-  }
-}
-
-function extractErrorDetails(error) {
-  return {
-    message: error?.message || "Unknown error",
-    code: error?.code || null,
-    details: error?.details || null,
-    hint: error?.hint || null
-  };
-}
-
-function renderSkills(rows, onDelete) {
   if (!skillGrid || !emptyState) {
+    console.error("skills page containers missing");
     return;
   }
 
-  skillGrid.innerHTML = "";
-
-  rows.forEach((row) => {
-    const skillName = row.skills?.name || "Unnamed skill";
-    const typeLabel = row.type === "learn" ? "Learn" : "Teach";
-
-    const card = document.createElement("article");
-    card.className = "card skill-card";
-    card.innerHTML = `
-      <h3>${skillName}</h3>
-      <div class="skill-meta">
-        <span>Your skill type</span>
-        <span>${typeLabel}</span>
-      </div>
-      <div class="skill-actions">
-        <button class="btn btn-outline delete-skill-btn" type="button">Delete</button>
-      </div>
-    `;
-
-    card.querySelector(".delete-skill-btn")?.addEventListener("click", () => onDelete(row.id));
-    skillGrid.appendChild(card);
+  console.log("skills DOM refs found", {
+    searchInputId: searchInput.id,
+    typeSelectId: typeSelect.id
   });
 
-  if (rows.length === 0) {
-    setStatus("No skills added yet. Enter a skill and press Enter.");
-  } else {
-    clearStatus();
-    emptyState.style.display = "none";
-  }
-}
-
-async function bootstrapSkills() {
-  if (!skillGrid || !searchInput || !typeSelect) {
-    return;
-  }
-
-  const { getSupabaseClient, waitForSessionRestore, buildRedirectUrl } = await import("./supabase.js");
-  const supabase = await getSupabaseClient();
-  const loginUrl = buildRedirectUrl("login.html");
-
-  if (typeSelect.options.length === 0) {
-    typeSelect.innerHTML = `
-      <option value="teach">Teach</option>
-      <option value="learn">Learn</option>
-    `;
-  }
-
-  setControlsDisabled(true);
-  setStatus("Loading your skills...");
-
-  const session = await waitForSessionRestore(supabase);
-  const user = session?.user || null;
-  if (!user) {
-    safeRedirect(loginUrl);
-    return;
-  }
-
-  let activeUserId = user.id;
+  let supabase = null;
+  let activeUserId = null;
   let cachedRows = [];
+  let initPromise = null;
 
-  const fetchSkills = async () => {
-    setControlsDisabled(true);
+  function extractErrorDetails(error) {
+    return {
+      message: error?.message || "Unknown error",
+      code: error?.code || null,
+      details: error?.details || null,
+      hint: error?.hint || null
+    };
+  }
 
+  function normalizeSkillName(value) {
+    return String(value || "").trim().replace(/\s+/g, " ");
+  }
+
+  function safeRedirect(url) {
     try {
-      const { data, error } = await supabase
-        .from("user_skills")
-        .select("id, user_id, type, skill_id, skills:skill_id(id, name)")
-        .eq("user_id", activeUserId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw error;
+      const current = new URL(window.location.href);
+      const target = new URL(url, window.location.origin);
+      if (target.origin !== window.location.origin || current.href === target.href) {
+        return false;
       }
-
-      cachedRows = data || [];
-      renderSkills(cachedRows, deleteSkill);
-    } catch (error) {
-      console.error("Failed to load skills:", extractErrorDetails(error));
-      setStatus("Unable to load skills. Please refresh and retry.", true);
-      renderSkills([], deleteSkill);
-    } finally {
-      setControlsDisabled(false);
+      window.location.replace(target.href);
+      return true;
+    } catch (_error) {
+      return false;
     }
-  };
+  }
 
-  const getOrCreateSkill = async (skillName) => {
-    const { data: existing, error: existingError } = await supabase
+  function setStatus(message, isError = false) {
+    emptyState.textContent = message;
+    emptyState.style.color = isError ? "#b42318" : "";
+    emptyState.style.display = "block";
+  }
+
+  function clearStatus() {
+    emptyState.textContent = "";
+    emptyState.style.color = "";
+  }
+
+  function setLoadingState(isLoading) {
+    searchInput.disabled = isLoading;
+    typeSelect.disabled = isLoading;
+    if (addSkillButton) {
+      addSkillButton.disabled = isLoading;
+    }
+  }
+
+  function renderSkills(rows, onDelete) {
+    skillGrid.innerHTML = "";
+
+    rows.forEach((row) => {
+      const skillName = row.skills?.name || "Unnamed skill";
+      const skillType = row.type === "learn" ? "Learn" : "Teach";
+
+      const card = document.createElement("article");
+      card.className = "card skill-card";
+      card.innerHTML = `
+        <h3>${skillName}</h3>
+        <div class="skill-meta">
+          <span>Type</span>
+          <span>${skillType}</span>
+        </div>
+        <div class="skill-actions">
+          <button class="btn btn-outline delete-skill-btn" type="button">Delete</button>
+        </div>
+      `;
+
+      card.querySelector(".delete-skill-btn")?.addEventListener("click", () => onDelete(row.id));
+      skillGrid.appendChild(card);
+    });
+
+    if (rows.length === 0) {
+      setStatus("No skills added yet. Enter a skill name and press Enter.");
+    } else {
+      clearStatus();
+      emptyState.style.display = "none";
+    }
+  }
+
+  async function fetchSkills() {
+    if (!supabase || !activeUserId) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("user_skills")
+      .select("id, user_id, type, skill_id, skills:skill_id(id, name)")
+      .eq("user_id", activeUserId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    cachedRows = data || [];
+    renderSkills(cachedRows, deleteSkill);
+  }
+
+  async function getOrCreateSkill(skillName) {
+    const { data: existingSkill, error: existingError } = await supabase
       .from("skills")
       .select("id, name")
       .ilike("name", skillName)
@@ -178,21 +141,21 @@ async function bootstrapSkills() {
     if (existingError) {
       throw existingError;
     }
-    if (existing?.id) {
-      return existing;
+    if (existingSkill?.id) {
+      return existingSkill;
     }
 
-    const { data: inserted, error: insertError } = await supabase
+    const { data: insertedSkill, error: insertError } = await supabase
       .from("skills")
       .insert({ name: skillName })
       .select("id, name")
       .maybeSingle();
 
-    if (!insertError && inserted?.id) {
-      return inserted;
+    if (!insertError && insertedSkill?.id) {
+      return insertedSkill;
     }
 
-    const { data: fallback, error: fallbackError } = await supabase
+    const { data: fallbackSkill, error: fallbackError } = await supabase
       .from("skills")
       .select("id, name")
       .ilike("name", skillName)
@@ -202,44 +165,102 @@ async function bootstrapSkills() {
     if (fallbackError) {
       throw fallbackError;
     }
-    if (!fallback?.id && insertError) {
+    if (!fallbackSkill?.id && insertError) {
       throw insertError;
     }
-    return fallback;
-  };
+    return fallbackSkill;
+  }
 
-  const addSkillFromInput = async () => {
+  async function initializeIfNeeded() {
+    if (initPromise) {
+      return initPromise;
+    }
+
+    initPromise = (async () => {
+      const { getSupabaseClient, waitForSessionRestore, buildRedirectUrl } = await import("./supabase.js");
+      supabase = await getSupabaseClient();
+      const loginUrl = buildRedirectUrl("login.html");
+
+      typeSelect.innerHTML = `
+        <option value="teach">Teach</option>
+        <option value="learn">Learn</option>
+      `;
+
+      setLoadingState(true);
+      setStatus("Loading your skills...");
+
+      const session = await waitForSessionRestore(supabase);
+      const user = session?.user || null;
+      if (!user) {
+        safeRedirect(loginUrl);
+        return;
+      }
+
+      activeUserId = user.id;
+      await fetchSkills();
+
+      supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+        const nextUser = nextSession?.user || null;
+        if (!nextUser) {
+          safeRedirect(loginUrl);
+          return;
+        }
+        if (nextUser.id !== activeUserId) {
+          activeUserId = nextUser.id;
+          try {
+            await fetchSkills();
+          } catch (error) {
+            console.error("Failed to reload skills after auth change:", extractErrorDetails(error));
+          }
+        }
+      });
+    })()
+      .catch((error) => {
+        console.error("Skills initialization failed:", extractErrorDetails(error));
+        setStatus("Skills initialization failed.", true);
+      })
+      .finally(() => {
+        setLoadingState(false);
+      });
+
+    return initPromise;
+  }
+
+  async function addSkill() {
+    console.log("addSkill triggered");
+    await initializeIfNeeded();
+
+    if (!supabase || !activeUserId) {
+      setStatus("Session unavailable. Please login again.", true);
+      return;
+    }
+
     const skillName = normalizeSkillName(searchInput.value);
     const type = typeSelect.value === "learn" ? "learn" : "teach";
 
     if (!skillName) {
-      setStatus("Enter a skill name before pressing Enter.", true);
+      setStatus("Enter a skill name first.", true);
       return;
     }
 
-    setControlsDisabled(true);
+    setLoadingState(true);
     setStatus("Adding skill...");
 
     try {
       const skill = await getOrCreateSkill(skillName);
       if (!skill?.id) {
-        throw new Error("Skill could not be created.");
+        throw new Error("Unable to resolve skill ID.");
       }
 
-      const duplicate = cachedRows.find(
+      const alreadyExists = cachedRows.some(
         (row) => row.skill_id === skill.id && row.type === type
       );
-      if (duplicate) {
-        setStatus("This skill already exists for the selected type.");
+      if (alreadyExists) {
+        setStatus("Skill already exists for this type.");
         return;
       }
 
-      const payload = {
-        user_id: activeUserId,
-        skill_id: skill.id,
-        type
-      };
-
+      const payload = { user_id: activeUserId, skill_id: skill.id, type };
       const { error: upsertError } = await supabase
         .from("user_skills")
         .upsert(payload, { onConflict: "user_id,skill_id,type" });
@@ -259,14 +280,19 @@ async function bootstrapSkills() {
       await fetchSkills();
     } catch (error) {
       console.error("Failed to add skill:", extractErrorDetails(error));
-      setStatus("Could not add skill. Check RLS policies and try again.", true);
+      setStatus("Could not add skill. Check RLS and unique index.", true);
     } finally {
-      setControlsDisabled(false);
+      setLoadingState(false);
     }
-  };
+  }
 
-  const deleteSkill = async (entryId) => {
-    setControlsDisabled(true);
+  async function deleteSkill(entryId) {
+    await initializeIfNeeded();
+    if (!supabase || !activeUserId) {
+      return;
+    }
+
+    setLoadingState(true);
     setStatus("Deleting skill...");
 
     try {
@@ -283,68 +309,40 @@ async function bootstrapSkills() {
       await fetchSkills();
     } catch (error) {
       console.error("Failed to delete skill:", extractErrorDetails(error));
-      setStatus("Could not delete skill. Please try again.", true);
+      setStatus("Could not delete skill. Check RLS and retry.", true);
     } finally {
-      setControlsDisabled(false);
+      setLoadingState(false);
     }
-  };
+  }
 
-  const onAddRequest = async (event) => {
-    if (event) {
-      event.preventDefault();
-    }
-    await addSkillFromInput();
-  };
-
-  searchInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      onAddRequest(event).catch((error) => {
-        console.error("Add skill action failed:", extractErrorDetails(error));
-        setStatus("Could not add skill. Please try again.", true);
-        setControlsDisabled(false);
-      });
+  searchInput.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      console.log("Enter pressed");
+      await addSkill();
     }
   });
+  console.log("Event listener attached: #searchInput keydown");
 
   if (addSkillButton) {
-    addSkillButton.addEventListener("click", (event) => {
-      onAddRequest(event).catch((error) => {
-        console.error("Add button action failed:", extractErrorDetails(error));
-        setStatus("Could not add skill. Please try again.", true);
-        setControlsDisabled(false);
-      });
+    addSkillButton.addEventListener("click", async (e) => {
+      e.preventDefault();
+      console.log("Add button clicked");
+      await addSkill();
     });
+    console.log("Event listener attached: add button click");
   }
 
   if (skillsForm) {
-    skillsForm.addEventListener("submit", (event) => {
-      onAddRequest(event).catch((error) => {
-        console.error("Skill form submit failed:", extractErrorDetails(error));
-        setStatus("Could not add skill. Please try again.", true);
-        setControlsDisabled(false);
-      });
+    skillsForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      console.log("Skills form submit");
+      await addSkill();
     });
+    console.log("Event listener attached: skills form submit");
   }
 
-  await fetchSkills();
-
-  supabase.auth.onAuthStateChange((_event, nextSession) => {
-    const nextUser = nextSession?.user || null;
-    if (!nextUser) {
-      safeRedirect(loginUrl);
-      return;
-    }
-
-    if (nextUser.id !== activeUserId) {
-      activeUserId = nextUser.id;
-      fetchSkills().catch((error) => {
-        console.error("Failed to reload skills after auth change:", error);
-      });
-    }
+  initializeIfNeeded().catch((error) => {
+    console.error("Initial skills bootstrap failed:", extractErrorDetails(error));
   });
-}
-
-bootstrapSkills().catch((error) => {
-  console.error("Skills bootstrap failed:", extractErrorDetails(error));
-  setStatus("Skills page could not initialize.", true);
 });
