@@ -153,38 +153,40 @@ async function bootstrapProfile() {
 
   const handleSkillAdd = async (type) => {
     const input = type === "teach" ? teachSkillInput : learnSkillInput;
-    const rawValue = normalizeText(input?.value || "");
+    const skillName = normalizeText(input?.value || "");
 
-    if (!rawValue) {
+    if (!skillName) {
       return;
     }
 
-    const restoredUser = await getUserAfterSessionRestore();
-    if (!restoredUser) {
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+    if (getUserError) {
+      throw getUserError;
+    }
+    if (!user) {
       safeRedirect(loginUrl);
       return;
     }
-    activeUserId = restoredUser.id;
-    const userId = restoredUser.id;
-    console.log("userId", userId);
+    activeUserId = user.id;
+    const userId = user.id;
+    console.log("User ID:", userId);
 
-    const { data: existingSkillRows, error: existingSkillError } = await supabase
+    const { data, error: existingSkillError } = await supabase
       .from("skills")
-      .select("id, name")
-      .ilike("name", rawValue)
+      .select("id")
+      .ilike("name", skillName)
       .limit(1);
 
     if (existingSkillError) {
       throw existingSkillError;
     }
 
-    let skillId = existingSkillRows?.[0]?.id || null;
+    let skillId = data?.[0]?.id || null;
     if (!skillId) {
       const { data: insertedSkillRows, error: insertSkillError } = await supabase
         .from("skills")
-        .insert({ name: rawValue })
-        .select("id")
-        .limit(1);
+        .insert({ name: skillName })
+        .select("id");
       if (insertSkillError) {
         throw insertSkillError;
       }
@@ -194,24 +196,21 @@ async function bootstrapProfile() {
     if (!skillId) {
       throw new Error("Skill ID not found after lookup/insert.");
     }
-    console.log("skillId", skillId);
+    console.log("Skill ID:", skillId);
 
-    const { data: insertResult, error: userSkillError } = await supabase
+    const { data: result, error } = await supabase
       .from("user_skills")
-      .upsert(
-        {
-          user_id: userId,
-          skill_id: skillId,
-          type
-        },
-        { onConflict: "user_id,skill_id,type" }
-      )
+      .insert({
+        user_id: userId,
+        skill_id: skillId,
+        type: type
+      })
       .select("*");
 
-    console.log("insert result", insertResult);
-    if (userSkillError) {
-      console.error("error", extractErrorDetails(userSkillError));
-      throw userSkillError;
+    console.log("Insert result:", result);
+    console.log("Insert error:", error);
+    if (error) {
+      throw error;
     }
 
     if (input) {
@@ -336,7 +335,7 @@ async function bootstrapProfile() {
   if (addTeachButton) {
     addTeachButton.addEventListener("click", (event) => {
       event.preventDefault();
-      console.log("Teach add clicked");
+      console.log("Teach button clicked");
       handleSkillAdd("teach").catch((error) => {
         console.error("error", extractErrorDetails(error));
         setStatus("Could not add teach skill. Check RLS and try again.", true);
@@ -347,7 +346,7 @@ async function bootstrapProfile() {
   if (addLearnButton) {
     addLearnButton.addEventListener("click", (event) => {
       event.preventDefault();
-      console.log("Learn add clicked");
+      console.log("Learn button clicked");
       handleSkillAdd("learn").catch((error) => {
         console.error("error", extractErrorDetails(error));
         setStatus("Could not add learn skill. Check RLS and try again.", true);
