@@ -399,13 +399,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       .from("user_skills")
       .select(
         `
+          id,
           user_id,
           type,
-          profiles(
+          skills(name),
+          profiles!user_skills_user_id_fkey(
+            id,
             full_name,
             location
-          ),
-          skills(name)
+          )
         `
       )
       .eq("skill_id", skill.id)
