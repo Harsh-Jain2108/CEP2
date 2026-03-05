@@ -9,8 +9,6 @@ const addTeachButton = document.getElementById("addTeach");
 const addLearnButton = document.getElementById("addLearn");
 const teachTags = document.getElementById("teachTags");
 const learnTags = document.getElementById("learnTags");
-const teachSearchToggle = document.getElementById("teachSearchToggle");
-const learnSearchToggle = document.getElementById("learnSearchToggle");
 
 function extractErrorDetails(error) {
   return {
@@ -48,24 +46,6 @@ function setLoadingState(isLoading) {
   if (saveButton) {
     saveButton.disabled = isLoading;
   }
-  if (teachSkillInput) {
-    teachSkillInput.disabled = isLoading;
-  }
-  if (learnSkillInput) {
-    learnSkillInput.disabled = isLoading;
-  }
-  if (addTeachButton) {
-    addTeachButton.disabled = isLoading;
-  }
-  if (addLearnButton) {
-    addLearnButton.disabled = isLoading;
-  }
-  if (teachSearchToggle) {
-    teachSearchToggle.disabled = isLoading;
-  }
-  if (learnSearchToggle) {
-    learnSearchToggle.disabled = isLoading;
-  }
 }
 
 function normalizeText(value) {
@@ -95,25 +75,8 @@ function getFallbackFullName(user) {
   );
 }
 
-function createSuggestionsContainer(input) {
-  const wrapper = input?.closest(".skill-search");
-  if (!wrapper) {
-    return null;
-  }
-
-  const list = document.createElement("div");
-  list.className = "skill-suggestions";
-  list.setAttribute("role", "listbox");
-  wrapper.appendChild(list);
-  return list;
-}
-
 async function bootstrapProfile() {
   if (!fullNameInput || !locationInput || !saveButton) {
-    return;
-  }
-  if (!window.SkillBackend) {
-    console.error("SkillBackend is missing. Ensure skills.js is loaded before profile.js.");
     return;
   }
 
@@ -133,118 +96,9 @@ async function bootstrapProfile() {
 
   let activeUserId = user.id;
 
-  const teachSearchState = {
-    type: "teach",
-    input: teachSkillInput,
-    toggle: teachSearchToggle,
-    wrapper: teachSkillInput?.closest(".skill-search") || null,
-    suggestions: createSuggestionsContainer(teachSkillInput),
-    items: [],
-    activeIndex: -1,
-    debounceTimer: null
-  };
-
-  const learnSearchState = {
-    type: "learn",
-    input: learnSkillInput,
-    toggle: learnSearchToggle,
-    wrapper: learnSkillInput?.closest(".skill-search") || null,
-    suggestions: createSuggestionsContainer(learnSkillInput),
-    items: [],
-    activeIndex: -1,
-    debounceTimer: null
-  };
-
-  const searchStateByType = {
-    teach: teachSearchState,
-    learn: learnSearchState
-  };
-
-  const clearSuggestions = (state) => {
-    if (!state?.suggestions) {
-      return;
-    }
-    state.items = [];
-    state.activeIndex = -1;
-    state.suggestions.textContent = "";
-    state.suggestions.classList.remove("show");
-  };
-
-  const setActiveSuggestion = (state, nextIndex) => {
-    if (!state?.items?.length) {
-      state.activeIndex = -1;
-      return;
-    }
-
-    const bounded = Math.max(0, Math.min(state.items.length - 1, nextIndex));
-    state.activeIndex = bounded;
-
-    const nodes = state.suggestions?.querySelectorAll(".skill-suggestion-item") || [];
-    nodes.forEach((node, idx) => {
-      if (idx === bounded) {
-        node.classList.add("active");
-        node.scrollIntoView({ block: "nearest" });
-      } else {
-        node.classList.remove("active");
-      }
-    });
-  };
-
-  const openSearch = (state) => {
-    if (!state?.wrapper || !state.input) {
-      return;
-    }
-    state.wrapper.classList.add("is-open");
-    state.input.placeholder = "Search skills...";
-    state.input.focus();
-  };
-
-  const collapseIfEmpty = (state) => {
-    if (!state?.wrapper || !state.input) {
-      return;
-    }
-    if (normalizeText(state.input.value)) {
-      return;
-    }
-    state.wrapper.classList.remove("is-open");
-    state.input.placeholder = "";
-  };
-
-  const renderSuggestions = (state, skills, onSelect) => {
-    if (!state?.suggestions) {
-      return;
-    }
-
-    state.items = skills;
-    state.activeIndex = -1;
-    state.suggestions.textContent = "";
-
-    if (!skills.length) {
-      state.suggestions.classList.remove("show");
-      return;
-    }
-
-    for (let idx = 0; idx < skills.length; idx += 1) {
-      const skill = skills[idx];
-      const item = document.createElement("button");
-      item.type = "button";
-      item.className = "skill-suggestion-item";
-      item.textContent = skill.name;
-      item.setAttribute("role", "option");
-      item.setAttribute("aria-selected", "false");
-
-      item.addEventListener("mouseenter", () => setActiveSuggestion(state, idx));
-      item.addEventListener("mousedown", (event) => event.preventDefault());
-      item.addEventListener("click", () => {
-        onSelect(skill).catch((error) => {
-          console.error("Suggestion select failed:", extractErrorDetails(error));
-        });
-      });
-
-      state.suggestions.appendChild(item);
-    }
-
-    state.suggestions.classList.add("show");
+  const getUserAfterSessionRestore = async () => {
+    const nextSession = await waitForSessionRestore(supabase);
+    return nextSession?.user || null;
   };
 
   const renderSkillTags = (container, skills, type) => {
@@ -256,181 +110,114 @@ async function bootstrapProfile() {
     for (const skill of skills) {
       const tag = document.createElement("span");
       tag.className = type === "learn" ? "tag learn" : "tag";
-      tag.appendChild(document.createTextNode(skill?.name || ""));
-
-      const removeButton = document.createElement("button");
-      removeButton.type = "button";
-      removeButton.setAttribute("aria-label", `Delete ${skill?.name || "skill"}`);
-      removeButton.textContent = "x";
-      removeButton.addEventListener("click", () => {
-        handleSkillDelete(skill.id).catch((error) => {
-          console.error("Failed to delete skill:", extractErrorDetails(error));
-          setStatus("Could not delete skill. Check RLS and try again.", true);
-        });
-      });
-
-      tag.appendChild(removeButton);
+      tag.textContent = skill?.name || "";
       container.appendChild(tag);
     }
   };
 
-  const loadSkills = async () => {
-    const result = await window.SkillBackend.loadSkills(supabase, { loginUrl });
-    activeUserId = result.user.id;
-    renderSkillTags(teachTags, result.teachSkills, "teach");
-    renderSkillTags(learnTags, result.learnSkills, "learn");
-  };
-
-  const handleSkillAdd = async (type, overrideName = "") => {
-    const state = searchStateByType[type];
-    const input = state?.input;
-    if (!input) {
+  const fetchAndRenderSkills = async () => {
+    const restoredUser = await getUserAfterSessionRestore();
+    if (!restoredUser) {
+      safeRedirect(loginUrl);
       return;
     }
+    activeUserId = restoredUser.id;
 
-    const skillName = normalizeText(overrideName || input.value);
+    const { data, error } = await supabase
+      .from("user_skills")
+      .select("type, skills(name)")
+      .eq("user_id", activeUserId);
+
+    if (error) {
+      throw error;
+    }
+
+    const teachSkillRows = [];
+    const learnSkillRows = [];
+
+    for (const row of data || []) {
+      const name = row?.skills?.name;
+      if (!name) {
+        continue;
+      }
+      if (row.type === "teach") {
+        teachSkillRows.push({ name });
+      } else if (row.type === "learn") {
+        learnSkillRows.push({ name });
+      }
+    }
+
+    renderSkillTags(teachTags, teachSkillRows, "teach");
+    renderSkillTags(learnTags, learnSkillRows, "learn");
+  };
+
+  const handleSkillAdd = async (type) => {
+    const input = type === "teach" ? teachSkillInput : learnSkillInput;
+    const skillName = normalizeText(input?.value || "");
+
     if (!skillName) {
       return;
     }
 
-    const result = await window.SkillBackend.addSkill(
-      supabase,
-      { skillName, type },
-      { loginUrl }
-    );
-
-    if (result.duplicate) {
-      setStatus("Skill already exists for this list.");
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+    if (getUserError) {
+      throw getUserError;
+    }
+    if (!user) {
+      safeRedirect(loginUrl);
       return;
     }
+    activeUserId = user.id;
+    const userId = user.id;
+    console.log("User ID:", userId);
 
-    input.value = "";
-    clearSuggestions(state);
-    collapseIfEmpty(state);
-    await loadSkills();
-    clearStatus();
+    const { data, error: existingSkillError } = await supabase
+      .from("skills")
+      .select("id")
+      .ilike("name", skillName)
+      .limit(1);
+
+    if (existingSkillError) {
+      throw existingSkillError;
+    }
+
+    let skillId = data?.[0]?.id || null;
+    if (!skillId) {
+      const { data: insertedSkillRows, error: insertSkillError } = await supabase
+        .from("skills")
+        .insert({ name: skillName })
+        .select("id");
+      if (insertSkillError) {
+        throw insertSkillError;
+      }
+      skillId = insertedSkillRows?.[0]?.id || null;
+    }
+
+    if (!skillId) {
+      throw new Error("Skill ID not found after lookup/insert.");
+    }
+    console.log("Skill ID:", skillId);
+
+    const { data: result, error } = await supabase
+      .from("user_skills")
+      .insert({
+        user_id: userId,
+        skill_id: skillId,
+        type: type
+      })
+      .select("*");
+
+    console.log("Insert result:", result);
+    console.log("Insert error:", error);
+    if (error) {
+      throw error;
+    }
+
+    if (input) {
+      input.value = "";
+    }
+    await fetchAndRenderSkills();
   };
-
-  const handleSkillDelete = async (skillRowId) => {
-    await window.SkillBackend.deleteSkill(supabase, { skillRowId }, { loginUrl });
-    await loadSkills();
-  };
-
-  const runSearch = async (state) => {
-    if (!state?.input) {
-      return;
-    }
-    const searchTerm = normalizeText(state.input.value);
-    if (!searchTerm) {
-      clearSuggestions(state);
-      return;
-    }
-
-    try {
-      const rows = await window.SkillBackend.searchSkills(
-        supabase,
-        { searchTerm, limit: 8 },
-        { loginUrl }
-      );
-      renderSuggestions(state, rows, async (skill) => {
-        await handleSkillAdd(state.type, skill.name);
-      });
-    } catch (error) {
-      console.error("Skill search failed:", extractErrorDetails(error));
-      clearSuggestions(state);
-    }
-  };
-
-  const bindSearchInteractions = (state) => {
-    if (!state?.input || !state?.toggle || !state?.wrapper) {
-      return;
-    }
-
-    state.toggle.addEventListener("click", () => {
-      if (state.wrapper.classList.contains("is-open") && !normalizeText(state.input.value)) {
-        clearSuggestions(state);
-        collapseIfEmpty(state);
-        return;
-      }
-      openSearch(state);
-    });
-
-    state.input.addEventListener("focus", () => {
-      openSearch(state);
-    });
-
-    state.input.addEventListener("input", () => {
-      openSearch(state);
-      clearTimeout(state.debounceTimer);
-      state.debounceTimer = setTimeout(() => {
-        runSearch(state).catch((error) => {
-          console.error("Debounced search failed:", extractErrorDetails(error));
-        });
-      }, 300);
-    });
-
-    state.input.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowDown") {
-        if (!state.items.length) {
-          return;
-        }
-        event.preventDefault();
-        setActiveSuggestion(state, state.activeIndex + 1);
-        return;
-      }
-
-      if (event.key === "ArrowUp") {
-        if (!state.items.length) {
-          return;
-        }
-        event.preventDefault();
-        const nextIndex = state.activeIndex <= 0 ? 0 : state.activeIndex - 1;
-        setActiveSuggestion(state, nextIndex);
-        return;
-      }
-
-      if (event.key === "Enter") {
-        event.preventDefault();
-        if (state.items.length > 0 && state.activeIndex >= 0) {
-          const selected = state.items[state.activeIndex];
-          if (selected?.name) {
-            handleSkillAdd(state.type, selected.name).catch((error) => {
-              console.error("Keyboard suggestion add failed:", extractErrorDetails(error));
-              setStatus("Could not add skill.", true);
-            });
-            return;
-          }
-        }
-
-        handleSkillAdd(state.type).catch((error) => {
-          console.error("Enter add failed:", extractErrorDetails(error));
-          setStatus("Could not add skill.", true);
-        });
-        return;
-      }
-
-      if (event.key === "Escape") {
-        clearSuggestions(state);
-        collapseIfEmpty(state);
-      }
-    });
-  };
-
-  bindSearchInteractions(teachSearchState);
-  bindSearchInteractions(learnSearchState);
-
-  document.addEventListener("click", (event) => {
-    for (const state of [teachSearchState, learnSearchState]) {
-      if (!state?.wrapper) {
-        continue;
-      }
-      if (state.wrapper.contains(event.target)) {
-        continue;
-      }
-      clearSuggestions(state);
-      collapseIfEmpty(state);
-    }
-  });
 
   const ensureProfileRow = async () => {
     const { data, error } = await supabase
@@ -471,7 +258,7 @@ async function bootstrapProfile() {
       const profile = await ensureProfileRow();
       fullNameInput.value = profile.full_name || getFallbackFullName(user);
       locationInput.value = profile.location || profile.bio || "";
-      await loadSkills();
+      await fetchAndRenderSkills();
       clearStatus();
     } catch (error) {
       console.error("Failed to load profile:", extractErrorDetails(error));
@@ -484,7 +271,7 @@ async function bootstrapProfile() {
   const saveProfile = async () => {
     const fullName = normalizeText(fullNameInput.value);
     const location = normalizeText(locationInput.value);
-    const bio = location;
+    const bio = location; // existing UI has one field; keep bio/location synchronized
 
     if (!fullName) {
       setStatus("Full name is required.", true);
@@ -548,8 +335,9 @@ async function bootstrapProfile() {
   if (addTeachButton) {
     addTeachButton.addEventListener("click", (event) => {
       event.preventDefault();
+      console.log("Teach button clicked");
       handleSkillAdd("teach").catch((error) => {
-        console.error("Failed to add teach skill:", extractErrorDetails(error));
+        console.error("error", extractErrorDetails(error));
         setStatus("Could not add teach skill. Check RLS and try again.", true);
       });
     });
@@ -558,8 +346,9 @@ async function bootstrapProfile() {
   if (addLearnButton) {
     addLearnButton.addEventListener("click", (event) => {
       event.preventDefault();
+      console.log("Learn button clicked");
       handleSkillAdd("learn").catch((error) => {
-        console.error("Failed to add learn skill:", extractErrorDetails(error));
+        console.error("error", extractErrorDetails(error));
         setStatus("Could not add learn skill. Check RLS and try again.", true);
       });
     });

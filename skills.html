@@ -35,14 +35,27 @@
             </p>
 
             <div class="filters">
-              <input
-                class="input"
-                id="searchInput"
-                type="text"
-                placeholder="Search by skill or teacher"
-              />
+              <div class="skill-search" id="skillSearchBox">
+                <button
+                  class="search-toggle"
+                  id="skillSearchToggle"
+                  type="button"
+                  aria-label="Search skills"
+                >
+                  <span aria-hidden="true">&#128269;</span>
+                </button>
+                <input
+                  class="input skill-search-input"
+                  id="searchInput"
+                  type="text"
+                  placeholder=""
+                  autocomplete="off"
+                />
+                <div class="search-suggestions" id="searchSuggestions"></div>
+              </div>
               <select class="select" id="skillFilter">
-                <option value="">All skills</option>
+                <option value="teach">Teach</option>
+                <option value="learn">Learn</option>
               </select>
               <select class="select" id="levelFilter">
                 <option value="">All levels</option>

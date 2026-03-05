@@ -49,99 +49,6 @@
   grid-template-columns: 2fr auto;
 }
 
-.skill-search {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  width: 42px;
-  max-width: 100%;
-  height: 44px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fff;
-  overflow: hidden;
-  transition:
-    width 240ms ease,
-    border-color 200ms ease,
-    box-shadow 200ms ease;
-}
-
-.skill-search.is-open {
-  width: min(100%, 430px);
-  border-color: #b8c9df;
-  box-shadow: 0 0 0 3px rgba(55, 114, 255, 0.12);
-}
-
-.search-toggle {
-  width: 42px;
-  height: 42px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #44546a;
-  font-size: 17px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 42px;
-}
-
-.skill-search-input.input {
-  border: none;
-  box-shadow: none;
-  padding: 0 12px 0 0;
-  width: 0;
-  opacity: 0;
-  transition:
-    width 240ms ease,
-    opacity 140ms ease;
-}
-
-.skill-search.is-open .skill-search-input.input {
-  width: calc(100% - 42px);
-  opacity: 1;
-}
-
-.skill-search .skill-suggestions {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  border: 1px solid #d9e1ec;
-  border-radius: 12px;
-  background: #fff;
-  max-height: 230px;
-  overflow-y: auto;
-  z-index: 20;
-  opacity: 0;
-  transform: translateY(-6px);
-  pointer-events: none;
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-
-.skill-search .skill-suggestions.show {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.skill-suggestion-item {
-  width: 100%;
-  border: none;
-  background: transparent;
-  text-align: left;
-  padding: 10px 12px;
-  cursor: pointer;
-  font: inherit;
-}
-
-.skill-suggestion-item:hover,
-.skill-suggestion-item.active {
-  background: #f1f5fa;
-}
-
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -207,10 +114,6 @@
 @media (max-width: 720px) {
   .input-row {
     grid-template-columns: 1fr;
-  }
-
-  .skill-search.is-open {
-    width: 100%;
   }
 
   .profile-card {

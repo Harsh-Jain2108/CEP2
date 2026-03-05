@@ -269,3 +269,260 @@
     deleteSkill
   };
 })(window);
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const skillSearchBox = document.getElementById("skillSearchBox");
+  const skillSearchToggle = document.getElementById("skillSearchToggle");
+  const searchInput = document.getElementById("searchInput");
+  const searchSuggestions = document.getElementById("searchSuggestions");
+  const typeSelect = document.getElementById("skillFilter");
+  const skillGrid = document.getElementById("skillGrid");
+  const emptyState = document.getElementById("emptyState");
+
+  if (
+    !skillSearchBox ||
+    !skillSearchToggle ||
+    !searchInput ||
+    !searchSuggestions ||
+    !typeSelect ||
+    !skillGrid ||
+    !emptyState
+  ) {
+    return;
+  }
+
+  const { getSupabaseClient, waitForSessionRestore, buildRedirectUrl } = await import("./supabase.js");
+  const supabase = await getSupabaseClient();
+  const loginUrl = buildRedirectUrl("login.html");
+
+  let suggestions = [];
+  let activeIndex = -1;
+  let debounceTimer = null;
+
+  const setStatus = (message, isError = false) => {
+    emptyState.textContent = message;
+    emptyState.style.display = "block";
+    emptyState.style.color = isError ? "#b42318" : "";
+  };
+
+  const clearStatus = () => {
+    emptyState.textContent = "";
+    emptyState.style.display = "none";
+    emptyState.style.color = "";
+  };
+
+  const openSearch = () => {
+    skillSearchBox.classList.add("is-open");
+    searchInput.placeholder = "Search skills...";
+    searchInput.focus();
+  };
+
+  const collapseIfEmpty = () => {
+    if (normalizeSearch(searchInput.value)) {
+      return;
+    }
+    skillSearchBox.classList.remove("is-open");
+    searchInput.placeholder = "";
+  };
+
+  const normalizeSearch = (value) => String(value || "").trim().replace(/\s+/g, " ");
+
+  const clearSuggestions = () => {
+    suggestions = [];
+    activeIndex = -1;
+    searchSuggestions.textContent = "";
+    searchSuggestions.classList.remove("show");
+  };
+
+  const setActiveSuggestion = (index) => {
+    if (!suggestions.length) {
+      activeIndex = -1;
+      return;
+    }
+    activeIndex = Math.max(0, Math.min(suggestions.length - 1, index));
+    const nodes = searchSuggestions.querySelectorAll(".suggestion-item");
+    nodes.forEach((node, idx) => {
+      if (idx === activeIndex) {
+        node.classList.add("active");
+        node.scrollIntoView({ block: "nearest" });
+      } else {
+        node.classList.remove("active");
+      }
+    });
+  };
+
+  const renderSkills = async () => {
+    const loaded = await window.SkillBackend.loadSkills(supabase, { loginUrl });
+    const rows = [...loaded.teachSkills, ...loaded.learnSkills];
+
+    skillGrid.textContent = "";
+    if (!rows.length) {
+      setStatus("No skills added yet. Use search to add one.");
+      return;
+    }
+
+    clearStatus();
+    for (const row of rows) {
+      const card = document.createElement("article");
+      card.className = "card skill-card";
+      card.innerHTML = `
+        <h3>${row.name}</h3>
+        <div class="skill-meta">
+          <span>Type</span>
+          <span>${row.type === "learn" ? "Learn" : "Teach"}</span>
+        </div>
+      `;
+      skillGrid.appendChild(card);
+    }
+  };
+
+  const addFromName = async (name) => {
+    const skillName = normalizeSearch(name);
+    if (!skillName) {
+      return;
+    }
+
+    const type = typeSelect.value === "learn" ? "learn" : "teach";
+    await window.SkillBackend.addSkill(
+      supabase,
+      { skillName, type },
+      { loginUrl }
+    );
+
+    searchInput.value = "";
+    clearSuggestions();
+    collapseIfEmpty();
+    await renderSkills();
+  };
+
+  const renderSuggestions = (rows) => {
+    suggestions = rows;
+    activeIndex = -1;
+    searchSuggestions.textContent = "";
+
+    if (!rows.length) {
+      searchSuggestions.classList.remove("show");
+      return;
+    }
+
+    rows.forEach((row, idx) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "suggestion-item";
+      button.textContent = row.name;
+      button.addEventListener("mouseenter", () => setActiveSuggestion(idx));
+      button.addEventListener("mousedown", (event) => event.preventDefault());
+      button.addEventListener("click", () => {
+        addFromName(row.name).catch((error) => {
+          console.error("Failed to add selected suggestion:", error);
+          setStatus("Could not add selected skill.", true);
+        });
+      });
+      searchSuggestions.appendChild(button);
+    });
+
+    searchSuggestions.classList.add("show");
+  };
+
+  const runSearch = async () => {
+    const term = normalizeSearch(searchInput.value);
+    if (!term) {
+      clearSuggestions();
+      return;
+    }
+
+    const rows = await window.SkillBackend.searchSkills(
+      supabase,
+      { searchTerm: term, limit: 8 },
+      { loginUrl }
+    );
+    renderSuggestions(rows);
+  };
+
+  skillSearchToggle.addEventListener("click", () => {
+    if (skillSearchBox.classList.contains("is-open") && !normalizeSearch(searchInput.value)) {
+      clearSuggestions();
+      collapseIfEmpty();
+      return;
+    }
+    openSearch();
+  });
+
+  searchInput.addEventListener("focus", openSearch);
+
+  searchInput.addEventListener("input", () => {
+    openSearch();
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      runSearch().catch((error) => {
+        console.error("Skill search failed:", error);
+        setStatus("Search failed. Try again.", true);
+      });
+    }, 300);
+  });
+
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      if (!suggestions.length) {
+        return;
+      }
+      event.preventDefault();
+      setActiveSuggestion(activeIndex + 1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      if (!suggestions.length) {
+        return;
+      }
+      event.preventDefault();
+      setActiveSuggestion(activeIndex <= 0 ? 0 : activeIndex - 1);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (suggestions.length && activeIndex >= 0) {
+        const row = suggestions[activeIndex];
+        if (row?.name) {
+          addFromName(row.name).catch((error) => {
+            console.error("Keyboard add from suggestion failed:", error);
+            setStatus("Could not add skill.", true);
+          });
+          return;
+        }
+      }
+
+      addFromName(searchInput.value).catch((error) => {
+        console.error("Keyboard add from input failed:", error);
+        setStatus("Could not add skill.", true);
+      });
+      return;
+    }
+
+    if (event.key === "Escape") {
+      clearSuggestions();
+      collapseIfEmpty();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (skillSearchBox.contains(event.target)) {
+      return;
+    }
+    clearSuggestions();
+    collapseIfEmpty();
+  });
+
+  try {
+    const session = await waitForSessionRestore(supabase);
+    if (!session?.user) {
+      window.location.replace(loginUrl);
+      return;
+    }
+    await renderSkills();
+  } catch (error) {
+    console.error("Skills page bootstrap failed:", error);
+    setStatus("Failed to load skills.", true);
+  }
+});
