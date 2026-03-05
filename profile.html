@@ -57,12 +57,23 @@
             <div class="skill-section">
               <h2>Skills I can teach</h2>
               <div class="input-row">
-                <input
-                  class="input"
-                  id="teachSkillInput"
-                  type="text"
-                  placeholder="Skill name"
-                />
+                <div class="skill-search" data-skill-type="teach">
+                  <button
+                    class="search-toggle"
+                    id="teachSearchToggle"
+                    type="button"
+                    aria-label="Search teach skills"
+                  >
+                    <span aria-hidden="true">&#128269;</span>
+                  </button>
+                  <input
+                    class="input skill-search-input"
+                    id="teachSkillInput"
+                    type="text"
+                    placeholder=""
+                    autocomplete="off"
+                  />
+                </div>
                 <select class="select" id="teachSkillLevel">
                   <option value="Beginner">Beginner</option>
                   <option value="Intermediate">Intermediate</option>
@@ -78,12 +89,23 @@
             <div class="skill-section">
               <h2>Skills I want to learn</h2>
               <div class="input-row learn">
-                <input
-                  class="input"
-                  id="learnSkillInput"
-                  type="text"
-                  placeholder="Skill name"
-                />
+                <div class="skill-search" data-skill-type="learn">
+                  <button
+                    class="search-toggle"
+                    id="learnSearchToggle"
+                    type="button"
+                    aria-label="Search learn skills"
+                  >
+                    <span aria-hidden="true">&#128269;</span>
+                  </button>
+                  <input
+                    class="input skill-search-input"
+                    id="learnSkillInput"
+                    type="text"
+                    placeholder=""
+                    autocomplete="off"
+                  />
+                </div>
                 <button class="btn btn-outline" type="button" id="addLearn">
                   Add
                 </button>
@@ -109,6 +131,7 @@
     </div>
 
     <script src="app.js"></script>
+    <script src="skills.js"></script>
     <script src="profile.js"></script>
   </body>
 </html>
