@@ -390,35 +390,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  const discoverTeachersForSkill = async (skill) => {
-    if (!skill?.id) {
+  const discoverTeachersForSkill = async (skillName) => {
+    const normalizedSkillName = normalizeSearch(skillName);
+    if (!normalizedSkillName) {
       return;
     }
 
-    const skillId = skill.id;
-    const { data, error } = await supabase
+    const { data: skillRow, error: skillError } = await supabase
+      .from("skills")
+      .select("id")
+      .ilike("name", normalizedSkillName)
+      .limit(1)
+      .single();
+
+    if (skillError || !skillRow?.id) {
+      skillGrid.textContent = "";
+      setStatus("Skill unavailable");
+      return;
+    }
+
+    const { data: teachers, error: teacherError } = await supabase
       .from("user_skills")
       .select(
         `
-          id,
           user_id,
+          profiles(full_name, location),
           skills(name),
-          profiles!user_skills_user_id_fkey(
-            full_name,
-            location
-          )
         `
       )
-      .eq("skill_id", skillId)
+      .eq("skill_id", skillRow.id)
       .eq("type", "teach");
 
-    if (error) {
-      console.error("Teacher discovery failed:", error);
+    if (teacherError) {
+      console.error("Teacher discovery failed:", teacherError);
       setStatus("Search failed. Try again.", true);
       return;
     }
 
-    const filtered = (data || []).filter((row) => row.user_id !== currentUser.id);
+    const filtered = (teachers || []).filter((row) => row.user_id !== currentUser.id);
     renderTeacherCards(filtered);
   };
 
@@ -442,7 +451,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       button.addEventListener("click", () => {
         searchInput.value = row.name;
         clearSuggestions();
-        discoverTeachersForSkill(row).catch((error) => {
+        discoverTeachersForSkill(row.name).catch((error) => {
           console.error("Failed to discover selected skill:", error);
           setStatus("Search failed. Try again.", true);
         });
@@ -516,7 +525,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (row?.name) {
           searchInput.value = row.name;
           clearSuggestions();
-          discoverTeachersForSkill(row).catch((error) => {
+          discoverTeachersForSkill(row.name).catch((error) => {
             console.error("Keyboard discovery from suggestion failed:", error);
             setStatus("Search failed. Try again.", true);
           });
@@ -540,7 +549,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
           searchInput.value = selected.name;
           clearSuggestions();
-          return discoverTeachersForSkill(selected);
+          return discoverTeachersForSkill(selected.name);
         })
         .catch((error) => {
           console.error("Keyboard discovery from input failed:", error);
