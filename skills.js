@@ -409,25 +409,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const { data: teachers, error: teacherError } = await supabase
+    const skillId = skillRow.id;
+    const { data, error } = await supabase
       .from("user_skills")
       .select(
         `
           user_id,
-          profiles(full_name, location),
           skills(name),
+          profiles(full_name, location)
         `
       )
-      .eq("skill_id", skillRow.id)
+      .eq("skill_id", skillId)
       .eq("type", "teach");
 
-    if (teacherError) {
-      console.error("Teacher discovery failed:", teacherError);
+    if (error) {
+      console.error("Teacher discovery failed:", error);
       setStatus("Search failed. Try again.", true);
       return;
     }
 
-    const filtered = (teachers || []).filter((row) => row.user_id !== currentUser.id);
+    const filtered = (data || []).filter((row) => row.user_id !== currentUser.id);
     renderTeacherCards(filtered);
   };
 
