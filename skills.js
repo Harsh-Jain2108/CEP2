@@ -395,22 +395,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const skillId = skill.id;
     const { data, error } = await supabase
       .from("user_skills")
       .select(
         `
           id,
           user_id,
-          type,
           skills(name),
           profiles!user_skills_user_id_fkey(
-            id,
             full_name,
             location
           )
         `
       )
-      .eq("skill_id", skill.id)
+      .eq("skill_id", skillId)
       .eq("type", "teach");
 
     if (error) {
