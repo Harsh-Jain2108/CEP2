@@ -275,7 +275,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const skillSearchToggle = document.getElementById("skillSearchToggle");
   const searchInput = document.getElementById("searchInput");
   const searchSuggestions = document.getElementById("searchSuggestions");
-  const typeSelect = document.getElementById("skillFilter");
   const skillGrid = document.getElementById("skillGrid");
   const emptyState = document.getElementById("emptyState");
 
@@ -284,7 +283,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     !skillSearchToggle ||
     !searchInput ||
     !searchSuggestions ||
-    !typeSelect ||
     !skillGrid ||
     !emptyState
   ) {
@@ -294,6 +292,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { getSupabaseClient, waitForSessionRestore, buildRedirectUrl } = await import("./supabase.js");
   const supabase = await getSupabaseClient();
   const loginUrl = buildRedirectUrl("login.html");
+  const session = await waitForSessionRestore(supabase);
+  const currentUser = session?.user || null;
+  if (!currentUser) {
+    window.location.replace(loginUrl);
+    return;
+  }
 
   let suggestions = [];
   let activeIndex = -1;
@@ -310,6 +314,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     emptyState.style.display = "none";
     emptyState.style.color = "";
   };
+
+  const escapeHtml = (value) =>
+    String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
   const openSearch = () => {
     skillSearchBox.classList.add("is-open");
@@ -351,48 +363,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   };
 
-  const renderSkills = async () => {
-    const loaded = await window.SkillBackend.loadSkills(supabase, { loginUrl });
-    const rows = [...loaded.teachSkills, ...loaded.learnSkills];
-
+  const renderTeacherCards = (rows) => {
     skillGrid.textContent = "";
     if (!rows.length) {
-      setStatus("No skills added yet. Use search to add one.");
+      setStatus("Skill unavailable");
       return;
     }
 
     clearStatus();
     for (const row of rows) {
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const teacherName = profile?.full_name || "Unknown User";
+      const location = profile?.location || "Not specified";
+      const skillName = row?.skills?.name || "";
+
       const card = document.createElement("article");
       card.className = "card skill-card";
       card.innerHTML = `
-        <h3>${row.name}</h3>
+        <h3>${escapeHtml(teacherName)}</h3>
         <div class="skill-meta">
-          <span>Type</span>
-          <span>${row.type === "learn" ? "Learn" : "Teach"}</span>
+          <span>Teaches: ${escapeHtml(skillName)}</span>
         </div>
+        <p class="connect-info">Location: ${escapeHtml(location)}</p>
       `;
       skillGrid.appendChild(card);
     }
   };
 
-  const addFromName = async (name) => {
-    const skillName = normalizeSearch(name);
-    if (!skillName) {
+  const discoverTeachersForSkill = async (skill) => {
+    if (!skill?.id) {
       return;
     }
 
-    const type = typeSelect.value === "learn" ? "learn" : "teach";
-    await window.SkillBackend.addSkill(
-      supabase,
-      { skillName, type },
-      { loginUrl }
-    );
+    const { data, error } = await supabase
+      .from("user_skills")
+      .select(
+        `
+          user_id,
+          type,
+          profiles(
+            full_name,
+            location
+          ),
+          skills(name)
+        `
+      )
+      .eq("skill_id", skill.id)
+      .eq("type", "teach");
 
-    searchInput.value = "";
-    clearSuggestions();
-    collapseIfEmpty();
-    await renderSkills();
+    if (error) {
+      console.error("Teacher discovery failed:", error);
+      setStatus("Search failed. Try again.", true);
+      return;
+    }
+
+    const filtered = (data || []).filter((row) => row.user_id !== currentUser.id);
+    renderTeacherCards(filtered);
   };
 
   const renderSuggestions = (rows) => {
@@ -413,9 +439,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       button.addEventListener("mouseenter", () => setActiveSuggestion(idx));
       button.addEventListener("mousedown", (event) => event.preventDefault());
       button.addEventListener("click", () => {
-        addFromName(row.name).catch((error) => {
-          console.error("Failed to add selected suggestion:", error);
-          setStatus("Could not add selected skill.", true);
+        searchInput.value = row.name;
+        clearSuggestions();
+        discoverTeachersForSkill(row).catch((error) => {
+          console.error("Failed to discover selected skill:", error);
+          setStatus("Search failed. Try again.", true);
         });
       });
       searchSuggestions.appendChild(button);
@@ -485,18 +513,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (suggestions.length && activeIndex >= 0) {
         const row = suggestions[activeIndex];
         if (row?.name) {
-          addFromName(row.name).catch((error) => {
-            console.error("Keyboard add from suggestion failed:", error);
-            setStatus("Could not add skill.", true);
+          searchInput.value = row.name;
+          clearSuggestions();
+          discoverTeachersForSkill(row).catch((error) => {
+            console.error("Keyboard discovery from suggestion failed:", error);
+            setStatus("Search failed. Try again.", true);
           });
           return;
         }
       }
 
-      addFromName(searchInput.value).catch((error) => {
-        console.error("Keyboard add from input failed:", error);
-        setStatus("Could not add skill.", true);
-      });
+      const term = normalizeSearch(searchInput.value);
+      if (!term) {
+        return;
+      }
+
+      window.SkillBackend
+        .searchSkills(supabase, { searchTerm: term, limit: 1 }, { loginUrl })
+        .then((rows) => {
+          const selected = rows?.[0] || null;
+          if (!selected) {
+            skillGrid.textContent = "";
+            setStatus("Skill unavailable");
+            return;
+          }
+          searchInput.value = selected.name;
+          clearSuggestions();
+          return discoverTeachersForSkill(selected);
+        })
+        .catch((error) => {
+          console.error("Keyboard discovery from input failed:", error);
+          setStatus("Search failed. Try again.", true);
+        });
       return;
     }
 
@@ -514,15 +562,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     collapseIfEmpty();
   });
 
-  try {
-    const session = await waitForSessionRestore(supabase);
-    if (!session?.user) {
-      window.location.replace(loginUrl);
-      return;
-    }
-    await renderSkills();
-  } catch (error) {
-    console.error("Skills page bootstrap failed:", error);
-    setStatus("Failed to load skills.", true);
-  }
+  skillGrid.textContent = "";
+  setStatus("Search a skill to find teachers.");
 });
