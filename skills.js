@@ -423,7 +423,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   };
 
-  const renderTeacherCards = (rows) => {
+  const getConnectionStatusByUserId = async (otherUserIds) => {
+    const uniqueIds = Array.from(new Set((otherUserIds || []).filter(Boolean)));
+    if (!uniqueIds.length) {
+      return new Map();
+    }
+
+    const safeIds = uniqueIds.map((id) => id.trim()).filter(Boolean);
+    const inList = safeIds.join(",");
+    const filter =
+      `and(sender_id.eq.${currentUser.id},receiver_id.in.(${inList})),` +
+      `and(receiver_id.eq.${currentUser.id},sender_id.in.(${inList}))`;
+
+    const { data, error } = await supabase
+      .from("connections")
+      .select("sender_id, receiver_id, status")
+      .or(filter);
+
+    if (error) {
+      throw error;
+    }
+
+    const byUserId = new Map();
+    for (const row of data || []) {
+      const otherId =
+        row?.sender_id === currentUser.id ? row?.receiver_id : row?.sender_id;
+      if (!otherId) {
+        continue;
+      }
+      const existing = byUserId.get(otherId);
+      if (!existing || row.status === "accepted") {
+        byUserId.set(otherId, row);
+      }
+    }
+    return byUserId;
+  };
+
+  const renderTeacherCards = async (rows) => {
     skillGrid.textContent = "";
     if (!rows.length) {
       setStatus("Skill unavailable");
@@ -431,11 +467,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     clearStatus();
+    let connectionByTeacherId = new Map();
+    try {
+      connectionByTeacherId = await getConnectionStatusByUserId(
+        rows.map((row) => row?.user_id).filter(Boolean)
+      );
+    } catch (error) {
+      console.error("Failed to load connection statuses:", error);
+    }
+
     for (const row of rows) {
       const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
       const teacherName = profile?.full_name || "Unknown User";
       const location = profile?.location || "Not specified";
       const skillName = row?.skills?.name || "";
+      const receiverId = row?.user_id || "";
+      const connection = connectionByTeacherId.get(receiverId) || null;
 
       const card = document.createElement("article");
       card.className = "card skill-card";
@@ -445,18 +492,43 @@ document.addEventListener("DOMContentLoaded", async () => {
           <span>Teaches: ${escapeHtml(skillName)}</span>
         </div>
         <p class="connect-info">Location: ${escapeHtml(location)}</p>
-        <button type="button" class="connect-btn">Connect</button>
       `;
 
-      const connectBtn = card.querySelector(".connect-btn");
-      const receiverId = row?.user_id || "";
+      const actionBtn = document.createElement("button");
+      actionBtn.type = "button";
+      card.appendChild(actionBtn);
+
       if (!receiverId || receiverId === currentUser.id) {
-        connectBtn.textContent = "Unavailable";
-        connectBtn.disabled = true;
+        actionBtn.className = "connect-btn";
+        actionBtn.textContent = "Unavailable";
+        actionBtn.disabled = true;
+      } else if (connection?.status === "accepted") {
+        actionBtn.className = "message-btn";
+        actionBtn.textContent = "Message";
+        actionBtn.addEventListener("click", () => {
+          const chatUrl = new URL("chat.html", window.location.href);
+          chatUrl.searchParams.set("user", receiverId);
+          window.location.assign(chatUrl.toString());
+        });
       } else {
-        connectBtn.addEventListener("click", async () => {
-          connectBtn.disabled = true;
-          connectBtn.textContent = "Sending...";
+        actionBtn.className = "connect-btn";
+
+        if (connection?.status === "pending") {
+          actionBtn.textContent = connection.sender_id === currentUser.id ? "Request Sent" : "Pending";
+          actionBtn.disabled = true;
+        } else if (connection?.status === "rejected") {
+          actionBtn.textContent = "Already Responded";
+          actionBtn.disabled = true;
+        } else {
+          actionBtn.textContent = "Connect";
+        }
+
+        actionBtn.addEventListener("click", async () => {
+          if (actionBtn.disabled) {
+            return;
+          }
+          actionBtn.disabled = true;
+          actionBtn.textContent = "Sending...";
           try {
             const result = await window.SkillBackend.createConnectionRequest(
               supabase,
@@ -465,16 +537,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
             const finalStatus = result?.row?.status || "pending";
             if (finalStatus === "accepted") {
-              connectBtn.textContent = "Connected";
+              const chatUrl = new URL("chat.html", window.location.href);
+              chatUrl.searchParams.set("user", receiverId);
+              window.location.assign(chatUrl.toString());
+              return;
             } else if (finalStatus === "rejected") {
-              connectBtn.textContent = "Already Responded";
+              actionBtn.textContent = "Already Responded";
             } else {
-              connectBtn.textContent = "Request Sent";
+              actionBtn.textContent = "Request Sent";
             }
           } catch (error) {
             console.error("Connect request failed:", error);
-            connectBtn.disabled = false;
-            connectBtn.textContent = "Connect";
+            actionBtn.disabled = false;
+            actionBtn.textContent = "Connect";
             setStatus("Failed to send connection request. Try again.", true);
           }
         });
@@ -509,7 +584,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .neq("user_id", currentUser.id);
 
     if (!embeddedResult.error) {
-      renderTeacherCards(embeddedResult.data || []);
+      await renderTeacherCards(embeddedResult.data || []);
       return;
     }
 
@@ -561,7 +636,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       skills: row.skills || { name: skillName }
     }));
 
-    renderTeacherCards(merged);
+    await renderTeacherCards(merged);
   };
 
   const renderSuggestions = (rows) => {

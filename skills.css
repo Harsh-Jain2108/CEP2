@@ -243,6 +243,28 @@
   transform: none;
 }
 
+.message-btn {
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: #0f766e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: fit-content;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 180ms ease,
+    transform 120ms ease;
+}
+
+.message-btn:hover {
+  background: #115e59;
+  transform: translateY(-1px);
+}
+
 .empty-state {
   padding: 24px 20px;
   border: 1px solid #d9e1ec;

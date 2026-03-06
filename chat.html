@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat | SkillUp</title>
+    <link rel="stylesheet" href="chat.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="index.html">
+            <div class="brand-mark">SU</div>
+            <span class="brand-title">SkillUp</span>
+          </a>
+          <nav class="site-nav">
+            <a href="index.html">Home</a>
+            <a href="login.html" class="nav-auth">Login</a>
+            <a href="register.html" class="nav-auth">Register</a>
+            <a href="profile.html">Profile</a>
+            <a href="skills.html">Skills</a>
+            <a href="requests.html">Requests</a>
+            <a href="community.html">Community</a>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section class="chat-hero">
+          <div class="container">
+            <h1 id="chatTitle">Chat</h1>
+            <p class="section-lede" id="chatSubtitle">Loading conversation...</p>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="chat-shell">
+              <div class="chat-messages" id="chatMessages"></div>
+              <form class="chat-input-row" id="chatForm">
+                <input
+                  class="input"
+                  id="chatInput"
+                  type="text"
+                  placeholder="Type message here..."
+                  maxlength="1000"
+                  autocomplete="off"
+                />
+                <button class="chat-send-btn" id="chatSendBtn" type="submit">Send</button>
+              </form>
+            </div>
+            <div class="chat-empty" id="chatEmpty">No messages yet. Start the conversation.</div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container">
+          <p>SkillUp helps communities find teachers for free.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="chat.js"></script>
+  </body>
+</html>
