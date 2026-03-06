@@ -237,6 +237,12 @@
   transform: translateY(-1px);
 }
 
+.connect-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .empty-state {
   padding: 24px 20px;
   border: 1px solid #d9e1ec;

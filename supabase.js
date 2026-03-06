@@ -1,7 +1,7 @@
 const SUPABASE_URL = "https://ivomdzongrguaaliljqh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_trINiPqOuXDGnjsbvO1JzA_m9YDL4Ry";
 const AUTH_PAGES = new Set(["login.html", "register.html"]);
-const PROTECTED_PAGES = new Set(["profile.html", "skills.html", "community.html"]);
+const PROTECTED_PAGES = new Set(["profile.html", "skills.html", "community.html", "requests.html"]);
 
 let supabaseClient;
 let sessionRestorePromise = null;

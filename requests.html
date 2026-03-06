@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Requests | SkillUp</title>
+    <link rel="stylesheet" href="requests.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="index.html">
+            <div class="brand-mark">SU</div>
+            <span class="brand-title">SkillUp</span>
+          </a>
+          <nav class="site-nav">
+            <a href="index.html">Home</a>
+            <a href="login.html" class="nav-auth">Login</a>
+            <a href="register.html" class="nav-auth">Register</a>
+            <a href="profile.html">Profile</a>
+            <a href="skills.html">Skills</a>
+            <a href="requests.html">Requests</a>
+            <a href="community.html">Community</a>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section class="requests-hero">
+          <div class="container">
+            <h1>Connection Requests</h1>
+            <p class="section-lede">Manage incoming requests from learners and mentors.</p>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="requests-list" id="requestsList"></div>
+            <div class="requests-empty" id="requestsEmpty">No pending connection requests.</div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container">
+          <p>SkillUp helps communities find teachers for free.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="requests.js"></script>
+  </body>
+</html>

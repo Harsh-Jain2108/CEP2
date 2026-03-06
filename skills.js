@@ -235,6 +235,56 @@
     }));
   }
 
+  async function createConnectionRequest(supabase, input, options = {}) {
+    const user = await getCurrentUserOrRedirect(supabase, options.loginUrl);
+    const receiverId = String(input?.receiverId || "").trim();
+
+    if (!receiverId) {
+      throw new Error("receiverId is required.");
+    }
+
+    if (receiverId === user.id) {
+      throw new Error("You cannot connect with yourself.");
+    }
+
+    const pairFilter = `and(sender_id.eq.${user.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${user.id})`;
+    const { data: existingRows, error: existingError } = await supabase
+      .from("connections")
+      .select("id, sender_id, receiver_id, status")
+      .or(pairFilter)
+      .limit(1);
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    if (existingRows?.length) {
+      return {
+        created: false,
+        row: existingRows[0]
+      };
+    }
+
+    const { data: insertedRow, error: insertError } = await supabase
+      .from("connections")
+      .insert({
+        sender_id: user.id,
+        receiver_id: receiverId,
+        status: "pending"
+      })
+      .select("id, sender_id, receiver_id, status")
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    return {
+      created: true,
+      row: insertedRow
+    };
+  }
+
   async function deleteSkill(supabase, input, options = {}) {
     const user = await getCurrentUserOrRedirect(supabase, options.loginUrl);
     const skillRowId = input?.skillRowId;
@@ -266,6 +316,7 @@
     loadSkills,
     addSkill,
     searchSkills,
+    createConnectionRequest,
     deleteSkill
   };
 })(window);
@@ -396,6 +447,39 @@ document.addEventListener("DOMContentLoaded", async () => {
         <p class="connect-info">Location: ${escapeHtml(location)}</p>
         <button type="button" class="connect-btn">Connect</button>
       `;
+
+      const connectBtn = card.querySelector(".connect-btn");
+      const receiverId = row?.user_id || "";
+      if (!receiverId || receiverId === currentUser.id) {
+        connectBtn.textContent = "Unavailable";
+        connectBtn.disabled = true;
+      } else {
+        connectBtn.addEventListener("click", async () => {
+          connectBtn.disabled = true;
+          connectBtn.textContent = "Sending...";
+          try {
+            const result = await window.SkillBackend.createConnectionRequest(
+              supabase,
+              { receiverId },
+              { loginUrl }
+            );
+            const finalStatus = result?.row?.status || "pending";
+            if (finalStatus === "accepted") {
+              connectBtn.textContent = "Connected";
+            } else if (finalStatus === "rejected") {
+              connectBtn.textContent = "Already Responded";
+            } else {
+              connectBtn.textContent = "Request Sent";
+            }
+          } catch (error) {
+            console.error("Connect request failed:", error);
+            connectBtn.disabled = false;
+            connectBtn.textContent = "Connect";
+            setStatus("Failed to send connection request. Try again.", true);
+          }
+        });
+      }
+
       skillGrid.appendChild(card);
     }
   };

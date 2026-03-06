@@ -1,6 +1,6 @@
 const nav = document.querySelector(".site-nav");
 const navLinks = document.querySelectorAll(".site-nav a");
-const MEMBER_ROUTE_HREFS = new Set(["profile.html", "skills.html"]);
+const MEMBER_ROUTE_HREFS = new Set(["profile.html", "skills.html", "requests.html"]);
 const PUBLIC_ROUTE_HREFS = new Set(["index.html"]);
 const AUTH_ROUTE_HREFS = new Set(["login.html", "register.html"]);
 
