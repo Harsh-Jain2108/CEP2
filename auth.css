@@ -92,7 +92,8 @@
   width: 100%;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface-elevated);
+  color: var(--ink);
   padding: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -125,13 +126,13 @@
 }
 
 .alert.success {
-  background: #ecfdf3;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
 }
 
 .alert.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
 }

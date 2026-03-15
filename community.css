@@ -58,7 +58,7 @@
 }
 
 .form-alert.error {
-  color: #991b1b;
+  color: var(--danger-text);
 }
 
 .connect-info {

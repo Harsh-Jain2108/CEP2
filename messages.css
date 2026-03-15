@@ -16,9 +16,9 @@
 }
 
 .conversation-item {
-  border: 1px solid #d9e1ec;
+  border: 1px solid var(--border-strong);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface-elevated);
   padding: 14px;
   text-decoration: none;
   color: inherit;
@@ -31,8 +31,8 @@
 }
 
 .conversation-item:hover {
-  border-color: #b8c9df;
-  box-shadow: 0 4px 14px rgba(28, 56, 99, 0.08);
+  border-color: var(--interactive-border);
+  box-shadow: var(--interactive-shadow);
   transform: translateY(-1px);
 }
 
@@ -47,27 +47,27 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--ink);
 }
 
 .conversation-time {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-subtle);
   white-space: nowrap;
 }
 
 .conversation-last {
   margin: 0;
   font-size: 14px;
-  color: #475569;
+  color: var(--ink-soft);
 }
 
 .messages-empty {
   padding: 22px;
-  border: 1px solid #d9e1ec;
+  border: 1px solid var(--border-strong);
   border-radius: 12px;
-  background: #f8fbff;
+  background: var(--surface-muted);
   text-align: center;
-  color: #4a5d79;
+  color: var(--text-muted);
   font-weight: 600;
 }

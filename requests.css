@@ -24,7 +24,7 @@
 .request-text {
   margin: 0;
   font-size: 15px;
-  color: #1f2937;
+  color: var(--ink);
 }
 
 .request-actions {
@@ -59,12 +59,12 @@
 }
 
 .request-btn.decline {
-  background: #e5e7eb;
-  color: #1f2937;
+  background: var(--interactive-soft);
+  color: var(--ink);
 }
 
 .request-btn.decline:hover {
-  background: #d1d5db;
+  background: var(--border);
 }
 
 .request-btn:disabled {
@@ -75,10 +75,10 @@
 
 .requests-empty {
   padding: 24px;
-  border: 1px solid #d9e1ec;
+  border: 1px solid var(--border-strong);
   border-radius: 14px;
-  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fd 100%);
+  background: linear-gradient(180deg, var(--surface-muted) 0%, var(--surface-muted-strong) 100%);
   text-align: center;
-  color: #4a5d79;
+  color: var(--text-muted);
   font-weight: 600;
 }

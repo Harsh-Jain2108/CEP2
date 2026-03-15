@@ -61,18 +61,18 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #eef7f4;
-  border: 1px solid #cfe7df;
-  color: var(--ink-soft);
+  background: var(--tag-bg);
+  border: 1px solid var(--tag-border);
+  color: var(--tag-text);
   font-size: 13px;
   font-weight: 600;
   animation: tagIn 0.3s ease;
 }
 
 .tag.learn {
-  background: #fff6e5;
-  border-color: #fde4b0;
-  color: #8a5300;
+  background: var(--tag-warm-bg);
+  border-color: var(--tag-warm-border);
+  color: var(--tag-warm-text);
 }
 
 @keyframes tagIn {
