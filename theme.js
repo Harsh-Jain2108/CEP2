@@ -16,7 +16,7 @@ function updateToggleLabel(button, theme) {
   }
 
   const isDark = theme === "dark";
-  button.textContent = isDark ? "Light" : "Dark";
+  button.textContent = "\uD83C\uDF19";
   button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
   button.setAttribute("aria-pressed", isDark ? "true" : "false");
   button.setAttribute("title", isDark ? "Switch to light mode" : "Switch to dark mode");

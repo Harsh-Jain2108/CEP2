@@ -66,6 +66,7 @@ function ensureNavbarLogoutControl() {
 
   const existing = nav.querySelector("#navLogoutBtn");
   if (existing) {
+    existing.className = "nav-logout logout-btn";
     return existing;
   }
 
@@ -73,9 +74,14 @@ function ensureNavbarLogoutControl() {
   logoutLink.id = "navLogoutBtn";
   logoutLink.href = "#";
   logoutLink.textContent = "Logout";
-  logoutLink.className = "nav-logout";
+  logoutLink.className = "nav-logout logout-btn";
   logoutLink.style.display = "none";
-  nav.appendChild(logoutLink);
+  const themeToggle = nav.querySelector("#themeToggle");
+  if (themeToggle) {
+    nav.insertBefore(logoutLink, themeToggle);
+  } else {
+    nav.appendChild(logoutLink);
+  }
   return logoutLink;
 }
 
