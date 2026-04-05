@@ -57,6 +57,26 @@ function safeRedirect(url) {
   }
 }
 
+function setupBackButtonRedirect() {
+  const currentPath = window.location.pathname.toLowerCase();
+  if (currentPath.endsWith("/index.html") || currentPath === "/" || currentPath.endsWith("\\")) {
+    return;
+  }
+
+  window.history.pushState(null, "", window.location.href);
+  const redirectToHome = (event) => {
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
+    safeRedirect("index.html");
+  };
+
+  window.addEventListener("popstate", redirectToHome);
+  document.addEventListener("backbutton", redirectToHome);
+}
+
+setupBackButtonRedirect();
+
 function setNavigationPending(isPending) {
   if (!nav) {
     return;
