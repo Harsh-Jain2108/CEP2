@@ -63,12 +63,13 @@ function setupBackButtonRedirect() {
     return;
   }
 
+  const backRedirectTarget = currentPath.endsWith("/chat.html") ? "messages.html" : "index.html";
   window.history.pushState(null, "", window.location.href);
   const redirectToHome = (event) => {
     if (event?.preventDefault) {
       event.preventDefault();
     }
-    safeRedirect("index.html");
+    safeRedirect(backRedirectTarget);
   };
 
   window.addEventListener("popstate", redirectToHome);
