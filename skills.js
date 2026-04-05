@@ -357,6 +357,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let suggestions = [];
   let activeIndex = -1;
   let debounceTimer = null;
+  const mobileMediaQuery = window.matchMedia("(max-width: 768px)");
+  let isMobileViewport = mobileMediaQuery.matches;
 
   const setStatus = (message, isError = false) => {
     emptyState.innerHTML = `<p class="empty-state-main">${escapeHtml(message)}</p>`;
@@ -378,13 +380,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
-  const openSearch = () => {
+  const focusSearchInput = () => {
+    if (document.activeElement === searchInput) {
+      return;
+    }
+    searchInput.focus({ preventScroll: true });
+  };
+
+  const openSearch = ({ focus = true } = {}) => {
     skillSearchBox.classList.add("is-open");
     searchInput.placeholder = "Search skills...";
-    searchInput.focus();
+    if (focus) {
+      focusSearchInput();
+    }
   };
 
   const collapseIfEmpty = () => {
+    if (isMobileViewport) {
+      return;
+    }
     if (normalizeSearch(searchInput.value)) {
       return;
     }
@@ -656,6 +670,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       button.textContent = row.name;
       button.addEventListener("mouseenter", () => setActiveSuggestion(idx));
       button.addEventListener("mousedown", (event) => event.preventDefault());
+      button.addEventListener("pointerdown", (event) => event.preventDefault());
       button.addEventListener("click", () => {
         searchInput.value = row.name;
         clearSuggestions();
@@ -747,7 +762,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   skillSearchToggle.addEventListener("click", () => {
-    if (skillSearchBox.classList.contains("is-open") && !normalizeSearch(searchInput.value)) {
+    if (
+      !isMobileViewport &&
+      skillSearchBox.classList.contains("is-open") &&
+      !normalizeSearch(searchInput.value)
+    ) {
       clearSuggestions();
       collapseIfEmpty();
       return;
@@ -755,7 +774,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     openSearch();
   });
 
-  searchInput.addEventListener("focus", openSearch);
+  searchInput.addEventListener("focus", () => openSearch({ focus: false }));
+
+  skillSearchBox.addEventListener("pointerdown", (event) => {
+    if (
+      isMobileViewport &&
+      event.target !== searchInput &&
+      !searchSuggestions.contains(event.target)
+    ) {
+      openSearch({ focus: false });
+      window.requestAnimationFrame(() => {
+        focusSearchInput();
+      });
+    }
+  });
 
   searchInput.addEventListener("input", () => {
     openSearch();
@@ -843,7 +875,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     updatePopularSkillsVisibility();
   });
 
+  const applyViewportMode = (matches) => {
+    isMobileViewport = matches;
+    if (matches) {
+      openSearch({ focus: false });
+      return;
+    }
+    collapseIfEmpty();
+  };
+
+  if (typeof mobileMediaQuery.addEventListener === "function") {
+    mobileMediaQuery.addEventListener("change", (event) => {
+      applyViewportMode(event.matches);
+    });
+  } else if (typeof mobileMediaQuery.addListener === "function") {
+    mobileMediaQuery.addListener((event) => {
+      applyViewportMode(event.matches);
+    });
+  }
+
   skillGrid.textContent = "";
   setStatus("Search a skill to find teachers.");
+  applyViewportMode(isMobileViewport);
   await loadPopularSkills();
 });
