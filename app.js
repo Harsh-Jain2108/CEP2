@@ -1,8 +1,14 @@
 const nav = document.querySelector(".site-nav");
+const headerInner = document.querySelector(".header-inner");
 const navLinks = document.querySelectorAll(".site-nav a");
+const themeToggle = document.getElementById("themeToggle");
 const MEMBER_ROUTE_HREFS = new Set(["profile.html", "skills.html", "requests.html", "messages.html", "chat.html"]);
 const PUBLIC_ROUTE_HREFS = new Set(["index.html"]);
 const AUTH_ROUTE_HREFS = new Set(["login.html", "register.html"]);
+const mobileNavMediaQuery = window.matchMedia("(max-width: 768px)");
+let menuToggle = null;
+let navActions = null;
+let themeToggleOriginalNextSibling = themeToggle ? themeToggle.nextElementSibling : null;
 
 navLinks.forEach((link) => {
   const href = link.getAttribute("href");
@@ -57,6 +63,165 @@ function setNavigationPending(isPending) {
   }
   nav.style.visibility = isPending ? "hidden" : "visible";
   nav.setAttribute("aria-busy", isPending ? "true" : "false");
+  if (menuToggle) {
+    menuToggle.style.visibility = isPending ? "hidden" : "visible";
+    menuToggle.setAttribute("aria-busy", isPending ? "true" : "false");
+  }
+  if (themeToggle) {
+    themeToggle.style.visibility = isPending ? "hidden" : "visible";
+    themeToggle.setAttribute("aria-busy", isPending ? "true" : "false");
+  }
+}
+
+function ensureHeaderActions() {
+  if (!headerInner) {
+    return null;
+  }
+
+  const existing = headerInner.querySelector(".nav-actions");
+  if (existing) {
+    return existing;
+  }
+
+  const container = document.createElement("div");
+  container.className = "nav-actions";
+  headerInner.insertBefore(container, nav);
+  return container;
+}
+
+function ensureMobileMenuToggle() {
+  if (!nav || !headerInner) {
+    return null;
+  }
+
+  const existing = document.getElementById("menuToggle");
+  if (existing) {
+    existing.setAttribute("aria-controls", "siteNav");
+    return existing;
+  }
+
+  nav.id = nav.id || "siteNav";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.id = "menuToggle";
+  button.className = "menu-toggle";
+  button.setAttribute("aria-controls", nav.id);
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-label", "Open navigation menu");
+  button.innerHTML = '<span aria-hidden="true">&#9776;</span>';
+  if (navActions) {
+    navActions.appendChild(button);
+  } else {
+    headerInner.insertBefore(button, nav);
+  }
+  return button;
+}
+
+function moveThemeToggleIntoNav() {
+  if (!nav || !themeToggle || themeToggle.parentElement === nav) {
+    return;
+  }
+
+  if (themeToggleOriginalNextSibling && themeToggleOriginalNextSibling.parentElement === nav) {
+    nav.insertBefore(themeToggle, themeToggleOriginalNextSibling);
+  } else {
+    nav.appendChild(themeToggle);
+  }
+}
+
+function moveThemeToggleToHeaderActions() {
+  if (!themeToggle || !navActions || themeToggle.parentElement === navActions) {
+    return;
+  }
+  navActions.appendChild(themeToggle);
+}
+
+function closeMobileMenu() {
+  if (!nav || !menuToggle) {
+    return;
+  }
+  nav.classList.remove("is-open");
+  menuToggle.setAttribute("aria-expanded", "false");
+  menuToggle.setAttribute("aria-label", "Open navigation menu");
+}
+
+function toggleMobileMenu() {
+  if (!nav || !menuToggle || !mobileNavMediaQuery.matches) {
+    return;
+  }
+  const isOpen = nav.classList.toggle("is-open");
+  menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  menuToggle.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+}
+
+navActions = ensureHeaderActions();
+menuToggle = ensureMobileMenuToggle();
+
+function applyResponsiveNavLayout() {
+  if (mobileNavMediaQuery.matches) {
+    moveThemeToggleToHeaderActions();
+    return;
+  }
+  moveThemeToggleIntoNav();
+  closeMobileMenu();
+}
+
+applyResponsiveNavLayout();
+
+if (menuToggle) {
+  menuToggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleMobileMenu();
+  });
+}
+
+if (nav) {
+  nav.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.closest("a") && mobileNavMediaQuery.matches) {
+      closeMobileMenu();
+    }
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (!nav || !menuToggle || !mobileNavMediaQuery.matches) {
+    return;
+  }
+  const target = event.target;
+  if (!(target instanceof Node)) {
+    return;
+  }
+  if (nav.contains(target) || menuToggle.contains(target)) {
+    return;
+  }
+  closeMobileMenu();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeMobileMenu();
+  }
+});
+
+if (typeof mobileNavMediaQuery.addEventListener === "function") {
+  mobileNavMediaQuery.addEventListener("change", (event) => {
+    applyResponsiveNavLayout();
+    if (!event.matches) {
+      closeMobileMenu();
+    }
+  });
+} else if (typeof mobileNavMediaQuery.addListener === "function") {
+  mobileNavMediaQuery.addListener(() => {
+    applyResponsiveNavLayout();
+    if (!mobileNavMediaQuery.matches) {
+      closeMobileMenu();
+    }
+  });
 }
 
 function ensureNavbarLogoutControl() {
@@ -76,8 +241,7 @@ function ensureNavbarLogoutControl() {
   logoutLink.textContent = "Logout";
   logoutLink.className = "nav-logout logout-btn";
   logoutLink.style.display = "none";
-  const themeToggle = nav.querySelector("#themeToggle");
-  if (themeToggle) {
+  if (themeToggle && themeToggle.parentElement === nav) {
     nav.insertBefore(logoutLink, themeToggle);
   } else {
     nav.appendChild(logoutLink);
@@ -116,6 +280,9 @@ function updateNavbar(user) {
     // Hide extra nav entries that are not part of the required states.
     link.style.display = "none";
   });
+
+  applyResponsiveNavLayout();
+  closeMobileMenu();
 }
 
 function requireAuth({ user, loginUrl }) {

@@ -271,6 +271,7 @@ async function bootstrapProfile() {
   const saveProfile = async () => {
     const fullName = normalizeText(fullNameInput.value);
     const location = normalizeText(locationInput.value);
+    // Keep storing college in the existing profiles.location column.
     const bio = location; // existing UI has one field; keep bio/location synchronized
 
     if (!fullName) {

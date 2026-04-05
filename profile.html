@@ -48,12 +48,12 @@
                 />
               </div>
               <div class="field">
-                <label for="location">Location or college</label>
+                <label for="location">College</label>
                 <input
                   class="input"
                   id="location"
                   type="text"
-                  placeholder="e.g. PCCOE, Pune"
+                  placeholder="Enter your college name"
                 />
               </div>
             </div>
@@ -67,13 +67,9 @@
                   type="text"
                   placeholder="Skill name"
                 />
-                <select class="select" id="teachSkillLevel">
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                </select>
-                <button class="btn btn-primary" type="button" id="addTeach">
-                  Add
+                <button class="add-skill-btn" type="button" id="addTeach">
+                  <span class="add-icon" aria-hidden="true">+</span>
+                  Add Skill
                 </button>
               </div>
               <div class="tag-list" id="teachTags"></div>
@@ -88,8 +84,9 @@
                   type="text"
                   placeholder="Skill name"
                 />
-                <button class="btn btn-outline" type="button" id="addLearn">
-                  Add
+                <button class="add-skill-btn" type="button" id="addLearn">
+                  <span class="add-icon" aria-hidden="true">+</span>
+                  Add Skill
                 </button>
               </div>
               <div class="tag-list" id="learnTags"></div>
@@ -105,10 +102,8 @@
         </div>
       </main>
 
-      <footer class="site-footer">
-        <div class="container">
-          <p>SkillUp keeps your profile data on this device only.</p>
-        </div>
+      <footer class="footer">
+        <p>© 2026 SkillUp. All rights reserved.</p>
       </footer>
     </div>
 

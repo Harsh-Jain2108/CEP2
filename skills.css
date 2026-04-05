@@ -14,8 +14,9 @@
   margin: 24px 0 32px;
   display: grid;
   gap: 14px;
-  grid-template-columns: 1.4fr repeat(3, minmax(120px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
+  justify-items: start;
 }
 
 .skill-search {
@@ -181,34 +182,10 @@
   font-size: 18px;
 }
 
-.skill-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-
-.level-badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.level-beginner {
-  background: var(--badge-beginner-bg);
-  color: var(--badge-beginner-text);
-}
-
-.level-intermediate {
-  background: var(--badge-intermediate-bg);
-  color: var(--badge-intermediate-text);
-}
-
-.level-advanced {
-  background: var(--badge-advanced-bg);
-  color: var(--badge-advanced-text);
+.skill-line {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .skill-actions {
@@ -218,9 +195,9 @@
   margin-top: 4px;
 }
 
-.connect-info {
-  font-size: 13px;
-  color: var(--ink-soft);
+.skill-line {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .connect-btn {

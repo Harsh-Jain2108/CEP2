@@ -3,6 +3,7 @@
 :root {
   --ink: #0f1d1b;
   --ink-soft: #304743;
+  --text-color: #0f1d1b;
   --primary: #1f7a6b;
   --primary-strong: #165f53;
   --accent: #d97706;
@@ -15,6 +16,7 @@
   --surface-muted-strong: #f3f7fd;
   --surface-accent: #e8efff;
   --border: #d6e2dc;
+  --border-color: #d6e2dc;
   --border-strong: #d9e1ec;
   --header-bg: rgba(248, 252, 251, 0.9);
   --header-border: rgba(214, 226, 220, 0.6);
@@ -56,6 +58,7 @@ html.dark-theme,
 body.dark-theme {
   --ink: #e5eef4;
   --ink-soft: #9eb1bf;
+  --text-color: #e5eef4;
   --primary: #4ec2ad;
   --primary-strong: #34a28f;
   --accent: #f2a94b;
@@ -68,6 +71,7 @@ body.dark-theme {
   --surface-muted-strong: #101b2d;
   --surface-accent: rgba(78, 123, 255, 0.14);
   --border: #2a3a52;
+  --border-color: #2a3a52;
   --border-strong: #31435e;
   --header-bg: rgba(10, 16, 29, 0.88);
   --header-border: rgba(49, 67, 94, 0.7);
@@ -165,6 +169,7 @@ button {
   justify-content: space-between;
   padding: 16px 0;
   gap: 16px;
+  position: relative;
 }
 
 .brand {
@@ -199,6 +204,41 @@ button {
   font-size: 14px;
   font-weight: 600;
   color: var(--ink-soft);
+}
+
+.menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-elevated);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.menu-toggle:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.menu-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--interactive-soft);
+}
+
+.nav-actions {
+  display: none;
 }
 
 .site-nav .nav-auth:first-of-type {
@@ -397,11 +437,21 @@ main {
   transform: translateY(0);
 }
 
-.site-footer {
+.site-footer,
+.footer {
   border-top: 1px solid var(--border);
   padding: 32px 0 40px;
   color: var(--ink-soft);
   font-size: 14px;
+}
+
+.footer {
+  text-align: center;
+  padding: 15px;
+  font-size: 14px;
+  color: var(--text-color);
+  border-top: 1px solid var(--border-color);
+  margin-top: 30px;
 }
 
 .footer-grid {
@@ -431,7 +481,7 @@ main {
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .container {
     width: min(1120px, calc(100vw - 20px));
   }
@@ -441,32 +491,72 @@ main {
   }
 
   .header-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     padding: 12px 0;
     gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
   }
 
   .site-nav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
     align-items: stretch;
-    width: 100%;
+    width: min(240px, calc(100vw - 20px));
+    padding: 10px;
     gap: 8px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease,
+      visibility 0.2s ease;
+  }
+
+  .site-nav.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
   }
 
   .site-nav a,
   .site-nav .logout-btn,
   .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
     min-height: 44px;
     padding: 10px 12px;
     border-radius: 10px;
     background: var(--surface-elevated);
     border: 1px solid var(--border);
-    justify-content: center;
   }
 
   .site-nav a {
-    display: inline-flex;
-    align-items: center;
     padding-bottom: 10px;
   }
 
@@ -478,6 +568,12 @@ main {
 
   .theme-toggle {
     margin-left: 0;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px;
+    border-radius: 10px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
   }
 
   .input,

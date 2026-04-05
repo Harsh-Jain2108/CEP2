@@ -41,12 +41,52 @@
 
 .input-row {
   display: grid;
-  grid-template-columns: 2fr 1.2fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
+  align-items: center;
 }
 
 .input-row.learn {
-  grid-template-columns: 2fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.add-skill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--surface-elevated);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.add-skill-btn:hover {
+  background: var(--surface-muted-strong);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.add-skill-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--interactive-soft);
+}
+
+.add-icon {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .tag-list {

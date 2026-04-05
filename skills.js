@@ -493,7 +493,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     for (const row of rows) {
       const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
       const teacherName = profile?.full_name || "Unknown User";
-      const location = profile?.location || "Not specified";
       const skillName = row?.skills?.name || "";
       const receiverId = row?.user_id || "";
       const connection = connectionByTeacherId.get(receiverId) || null;
@@ -502,10 +501,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       card.className = "card skill-card";
       card.innerHTML = `
         <h3>${escapeHtml(teacherName)}</h3>
-        <div class="skill-meta">
-          <span>Teaches: ${escapeHtml(skillName)}</span>
-        </div>
-        <p class="connect-info">Location: ${escapeHtml(location)}</p>
+        <p class="skill-line">Teaches: ${escapeHtml(skillName)}</p>
       `;
 
       const actionBtn = document.createElement("button");
